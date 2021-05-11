@@ -94,22 +94,73 @@ void packet_handler(u_char *param, const struct pcap_pkthdr *header, const u_cha
 	char timestr[16];
 	time_t local_tv_sec;
 
-	/*
-	 * unused parameters
-	 */
+	//Parametros no usados
 	(VOID)(param);
 	(VOID)(pkt_data);
 
-	/* convert the timestamp to readable format */
 	local_tv_sec = header->ts.tv_sec;
-	//ltime=localtime(&local_tv_sec);
-	//strftime( timestr, sizeof timestr, "%H:%M:%S", ltime);
-	//printf("%s,%.6d len:%d\n", timestr, header->ts.tv_usec, header->len);
-	
-	unsigned short tipo = (pkt_data[12]*256)+pkt_data[13];
-	if(tipo==2054)
-	{
-		int j=0,k=0;
+
+	//Analisis de encabezado Ethernet_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+		//Encabezado de Ethernet en crudo
+		    printf("-Encabezado Ethernet completo:\n");
+			int i;
+			for(i=0;i!=14;i++){
+				if(i%4==0)
+					printf("\t");
+				printf("%02X ",pkt_data[i]);
+				if(i%4==3)
+					printf("\n");
+			}
+		//Direccion MAC destino
+			int j=0,k=0;
+			printf("-MAC destino:\n");
+			for(j=0;j<6;j++){
+				printf("%02X",pkt_data[j]);
+				if(j!=5)
+					printf(":");   
+			}
+		
+		//Direccion MAC origen
+			printf("\n-MAC origen:\n");
+			for(k=6;k<12;k++){
+				printf("%02X",pkt_data[k]);
+				if(k!=11)
+					printf(":");  
+			}
+		//Tipo de protocolo
+			unsigned short tipo = (pkt_data[12]*256)+pkt_data[13];
+			printf("\n-Trama de tipo ");
+			switch (tipo){
+				case 2048://08 00 IPv4
+					printf("IPv4\n");
+					IPv4(tipo,header,pkt_data);
+					break;
+
+				case 2054://08 06 ARP
+					printf("ARP\n");
+					ARP(tipo,header,pkt_data);
+					break;
+
+				case 34525://86 DD IPv6
+					printf("IPv6\n");
+					IPv6(tipo,header,pkt_data);
+					break;
+				
+				default:
+					printf("Protocolo no soportado: %02X %02X (%d)",pkt_data[12],pkt_data[13],tipo);
+					break;
+			}
+		
+}
+
+
+
+void IPv4(unsigned short tipo, const struct pcap_pkthdr *header,const u_char *pkt_data){
+
+}
+
+void ARP(unsigned short tipo, const struct pcap_pkthdr *header,const u_char *pkt_data){
+	int j=0,k=0;
 		printf("MAC destino:\n");
 		for(j=0;j<6;j++)
 		{
@@ -172,16 +223,12 @@ void packet_handler(u_char *param, const struct pcap_pkthdr *header, const u_cha
 		for(j=38;j<42;j++)
 		{
 		   printf("%02X:",pkt_data[j]);   
-		}  	  			
-		
-		
-		
-		printf("\n\n\n");
-	}
-	else
-	printf("La trama captada no es un formato del Procolo ARP\nTipo: %d  %02X %02X\n\n",tipo,pkt_data[12],pkt_data[13]);
-	
-	
+		}
+
+}
+
+void IPv6(unsigned short tipo, const struct pcap_pkthdr *header,const u_char *pkt_data){
+	printf("Es de tipo IPv6... Nada mas... jejeje...\n");
 }
 
 

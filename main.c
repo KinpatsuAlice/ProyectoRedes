@@ -6,7 +6,7 @@
  */
 #define _CRT_SECURE_NO_WARNINGS
 #endif
-
+//prueba desde vsc xdxdxd
 #include <pcap.h>
 
 /* prototype of the packet handler */
@@ -136,8 +136,8 @@ void packet_handler(u_char *param, const struct pcap_pkthdr *header, const u_cha
 		if(tipo_dos==2048)
 		printf("Protocol type: %d (Ethernet)   %02X %02X\n",tipo_dos,pkt_data[16],pkt_data[17]);
 		
-		printf("Hardware address length: %02X (Por dirección MAC)\n",pkt_data[18]);
-		printf("Protocol addres length: %02X (Por dirección IP)\n",pkt_data[19]);
+		printf("Hardware address length: %02X (Por direcciï¿½n MAC)\n",pkt_data[18]);
+		printf("Protocol addres length: %02X (Por direcciï¿½n IP)\n",pkt_data[19]);
 		
 		if(pkt_data[21]==1)
 		printf("Operation code: %02X %02X  ARP Request (Solicitud a ARP)\n",pkt_data[20],pkt_data[21]);

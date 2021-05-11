@@ -6,7 +6,7 @@
  */
 #define _CRT_SECURE_NO_WARNINGS
 #endif
-//prueba desde vsc xdxdxd
+
 #include <pcap.h>
 
 /* prototype of the packet handler */

@@ -24,7 +24,7 @@ int main()
 	/* Retrieve the device list */
 	if(pcap_findalldevs(&alldevs, errbuf) == -1)
 	{
-		fprintf(stderr,"Error in pcap_findalldevs: %s\n", errbuf);
+		fprintf(stderr,"Error en pcap_findalldevs: %s\n", errbuf);
 		exit(1);
 	}
 	
@@ -35,21 +35,21 @@ int main()
 		if (d->description)
 			printf(" (%s)\n", d->description);
 		else
-			printf(" (No description available)\n");
+			printf(" (Descripcion no disponible)\n");
 	}
 	
 	if(i==0)
 	{
-		printf("\nNo interfaces found! Make sure WinPcap is installed.\n");
+		printf("\nNo se encontraron interfaces, asegurese que WinPcap esta instalado.\n");
 		return -1;
 	}
 	
-	printf("Enter the interface number (1-%d):",i);
+	printf("Ingresa el numero de interfaz (1-%d):",i);
 	scanf("%d", &inum);
 	
 	if(inum < 1 || inum > i)
 	{
-		printf("\nInterface number out of range.\n");
+		printf("\nNumero de interfaz fuerda de rango.\n");
 		/* Free the device list */
 		pcap_freealldevs(alldevs);
 		return -1;
@@ -68,13 +68,13 @@ int main()
 							 errbuf			// error buffer
 							 )) == NULL)
 	{
-		fprintf(stderr,"\nUnable to open the adapter. %s is not supported by WinPcap\n", d->name);
+		fprintf(stderr,"\nIncapaz de abrir el adaptador. %s no es compatible con WinPcap\n", d->name);
 		/* Free the device list */
 		pcap_freealldevs(alldevs);
 		return -1;
 	}
 	
-	printf("\nlistening on %s...\n\n", d->description);
+	printf("\nEscuchando en %s...\n\n", d->description);
 	
 	/* At this point, we don't need any more the device list. Free it */
 	pcap_freealldevs(alldevs);
@@ -136,8 +136,8 @@ void packet_handler(u_char *param, const struct pcap_pkthdr *header, const u_cha
 		if(tipo_dos==2048)
 		printf("Protocol type: %d (Ethernet)   %02X %02X\n",tipo_dos,pkt_data[16],pkt_data[17]);
 		
-		printf("Hardware address length: %02X (Por direcci�n MAC)\n",pkt_data[18]);
-		printf("Protocol addres length: %02X (Por direcci�n IP)\n",pkt_data[19]);
+		printf("Hardware address length: %02X (Por direccion MAC)\n",pkt_data[18]);
+		printf("Protocol addres length: %02X (Por direccion IP)\n",pkt_data[19]);
 		
 		if(pkt_data[21]==1)
 		printf("Operation code: %02X %02X  ARP Request (Solicitud a ARP)\n",pkt_data[20],pkt_data[21]);

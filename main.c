@@ -147,7 +147,7 @@ void packet_handler(u_char *param, const struct pcap_pkthdr *header, const u_cha
 					break;
 				
 				default:
-					printf("Protocolo no soportado: %02X %02X (%d)",pkt_data[12],pkt_data[13],tipo);
+					printf("Protocolo no soportado: %02X %02X (%d)\n",pkt_data[12],pkt_data[13],tipo);
 					break;
 			}
 	printf("\n_______________________________________________________________________\n");

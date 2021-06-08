@@ -9,11 +9,91 @@
 
 #include <pcap.h>
 
+
 /* prototype of the packet handler */
 void packet_handler(u_char *param, const struct pcap_pkthdr *header, const u_char *pkt_data);
 
-int main()
-{
+int main(){
+	int op=1;
+	printf("Bienvenido(a) al interpretador de paquetes");
+
+	while(1){
+		system("cls");
+		printf("Elija una opcion:\n\t1.Leer un archivo dada una direccion.\n\t2.Atrapar tramas con sniffer\n\t3.Creditos\n\t(Otro num).Salir\n");
+		scanf("%d",&op);
+		switch (op){
+		case 1:
+			Archivo();
+			break;
+		case 2:
+			Sniffer();
+			break;
+		case 3:
+			printf("Elaborado por:,,Gonzales Morelos Cesar Emiliano,Vazquez Hernandez Alan Mauricio y Lopez Gracia Angel Emmanuel");
+			break;
+		
+		default:
+			exit(0);
+			break;
+		}
+	}
+
+	return 0;
+}
+
+int Archivo(){
+	pcap_t *fp;
+	char errbuf[PCAP_ERRBUF_SIZE];
+	char source[PCAP_BUF_SIZE];
+	char RUTA[100];
+	printf("Escribe la direccion absoluta del archivo deseado: (Max 100 caracteres)\n");
+	scanf("%s",&RUTA);
+
+   /* if(argc != 2){
+
+        printf("usage: %s filename", argv[0]);
+        return -1;
+
+    }*/
+
+    /* Create the source string according to the new WinPcap syntax */
+    if ( pcap_createsrcstr( source,         // variable that will keep the source string
+                            PCAP_SRC_FILE,  // we want to open a file
+                            NULL,           // remote host
+                            NULL,           // port on the remote host
+                            RUTA, //argv[1],        // name of the file we want to open
+                            errbuf          // error buffer
+                            ) != 0)
+    {
+        fprintf(stderr,"\nError creando la cadena fuente\n");
+        return -1;
+    }
+    
+    /* Open the capture file */
+    if ( (fp= (pcap_t *)pcap_open(source,         // name of the device
+                        65536,          // portion of the packet to capture
+                                        // 65536 guarantees that the whole packet will be captured on all the link layers
+                         PCAP_OPENFLAG_PROMISCUOUS,     // promiscuous mode
+                         1000,              // read timeout
+                         NULL,              // authentication on the remote machine
+                         errbuf         // error buffer
+                         ) ) == NULL)
+    {
+        fprintf(stderr,"\nNo se puede abrir el archivo: %s\n", source);
+        return -1;
+    }
+
+    // read and dispatch packets until EOF is reached
+	int cantidad;
+	printf("\nEscribir cuantos paquetes se desean analizar:\n");
+	scanf("%d",cantidad);
+    pcap_loop(fp, cantidad, packet_handler, NULL);
+
+    return 0;
+
+}
+
+int Sniffer(){
 	pcap_if_t *alldevs;
 	pcap_if_t *d;
 	int inum;
@@ -80,16 +160,16 @@ int main()
 	pcap_freealldevs(alldevs);
 	
 	/* start the capture */
-	pcap_loop(adhandle, 50, packet_handler, NULL);
-	
+	int cantidad;
+	printf("\nEscribir cuantos paquetes se desean analizar:\n");
+	scanf("%d",cantidad);
+	pcap_loop(adhandle, cantidad, packet_handler, NULL);
 	pcap_close(adhandle);
 	return 0;
 }
 
-
 /* Callback function invoked by libpcap for every incoming packet */
-void packet_handler(u_char *param, const struct pcap_pkthdr *header, const u_char *pkt_data)
-{
+void packet_handler(u_char *param, const struct pcap_pkthdr *header, const u_char *pkt_data){
 	struct tm *ltime;
 	char timestr[16];
 	time_t local_tv_sec;
@@ -102,7 +182,7 @@ void packet_handler(u_char *param, const struct pcap_pkthdr *header, const u_cha
 
 	//Analisis de encabezado Ethernet_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
 		//Encabezado de Ethernet en crudo
-		    printf("-Encabezado Ethernet completo:\n");
+		    printf("+Encabezado Ethernet completo:\n");
 			int i;
 			for(i=0;i!=14;i++){
 				if(i%4==0)
@@ -113,7 +193,7 @@ void packet_handler(u_char *param, const struct pcap_pkthdr *header, const u_cha
 			}
 		//Direccion MAC destino
 			int j=0,k=0;
-			printf("\n-MAC destino:\n");
+			printf("\n+MAC destino:\n");
 			for(j=0;j<6;j++){
 				printf("%02X",pkt_data[j]);
 				if(j!=5)
@@ -121,7 +201,7 @@ void packet_handler(u_char *param, const struct pcap_pkthdr *header, const u_cha
 			}
 		
 		//Direccion MAC origen
-			printf("\n-MAC origen:\n");
+			printf("\n+MAC origen:\n");
 			for(k=6;k<12;k++){
 				printf("%02X",pkt_data[k]);
 				if(k!=11)
@@ -129,437 +209,253 @@ void packet_handler(u_char *param, const struct pcap_pkthdr *header, const u_cha
 			}
 		//Tipo de protocolo
 			unsigned short tipo = (pkt_data[12]*256)+pkt_data[13];
-			printf("\n-Trama de tipo ");
-			switch (tipo){
-				case 1://00 01 ICMP
-					printf("IPv4\n");
-					IPv4(tipo,header,pkt_data);
-					break;
+			printf("\n+Trama de tipo ");
+			if (tipo<=1500){
+				switch (tipo){
+					case 2048://08 00 IPv4
+						printf("IPv4\n");
+						IPv4(tipo,header,pkt_data);
+						break;
 
-				case 2048://08 00 IPv4
-					printf("IPv4\n");
-					IPv4(tipo,header,pkt_data);
-					break;
+					case 34525://86 DD IPv6
+						printf("IPv6\n");
+						IPv6(tipo,header,pkt_data);
+						break;
 
-				case 2054://08 06 ARP
-					printf("ARP\n");
-					ARP(tipo,header,pkt_data);
-					break;
-
-				case 34525://86 DD IPv6
-					printf("IPv6\n");
-					IPv6(tipo,header,pkt_data);
-					break;
-				
-				default:
-					printf("Protocolo no soportado: %02X %02X (%d)\n",pkt_data[12],pkt_data[13],tipo);
-					break;
+					
+					default:
+						printf("Protocolo no soportado: %02X %02X (%d)\n",pkt_data[12],pkt_data[13],tipo);
+						break;
+				}
+			}
+			else{
+				switch (tipo){
+					/*						
+					case 2054://08 06 ARP
+						printf("ARP\n");
+						ARP(tipo,header,pkt_data);
+						break;
+					*/
+					default:
+						printf("Protocolo no soportado o se trata de una trama de datos: %02X %02X (%d)\n",pkt_data[12],pkt_data[13],tipo);
+						break;
+				}
 			}
 	printf("\n_______________________________________________________________________\n");
 }
 
+//Catalogo de protocolos interpretables__________________________________________________________________________________________________________________________________
+void ARP(unsigned short extra, const struct pcap_pkthdr *header,const u_char *pkt_data){
+	int i=14;
+	int tl=pkt_data[i++]+pkt_data[i++];
+	
+    printf("-DSAP:");intbin(pkt_data[i],8);
+    	
+	printf("\n\tDireccion destino:");intbin(pkt_data[i]>>1,7);
+	int a=pkt_data[i++]&1;
+	printf("\n\t\tI/G:%s(%d)",a? "Grupo":"Individual",a);
+	
+	printf("\n\tSSAP:");intbin(pkt_data[i],8);
+	printf("\n\t\tDireccion:");intbin(pkt_data[i]>>7,8);
+	a=pkt_data[i++]&1;
+	printf("\n\t\tC/R:%s(%d)\n\t",a? "Respuesta":"Comando",a);   
+	
+	if(tl>3){//tomar 2 bytes de campo de control
+		a=pkt_data[i]&1;
+		switch(a){
+			case 0://I
+				printf("Trama I->");
+				a=(pkt_data[i++]>>1);
+				printf("\n\t\tNumero de secuencia de la trama enviada:");
+				intbin(a,8);
+				a=(pkt_data[i]>>1);
+				printf("\n\t\tNumero de secuencia de la proxima trama esperada:");
+				intbin(a,8);
+				printf("\n\t\tP/F:");
+				intbin(pkt_data[i]&1,8);
+				break;
+				
+			case 1:
+				switch((pkt_data[i]&2)>>1){
+					case 0://S
+						printf("Trama S->");
+						a=(pkt_data[i++]>>2)&3;
+						printf("\n\t\tCodigo:");
+						intbin(a,8);
+						a=(pkt_data[i]>>1);
+						printf("\n\t\tNumero de secuencia de la proxima trama esperada:");
+						intbin(a,8);
+						printf("\n\t\tP/F:");
+						intbin(pkt_data[i]&1,8);
+						break;
+				
+					case 1://U
+						printf("Trama U->");	
+						a=pkt_data[i]>>2;
+						a=((a&1)<<4)+((a&2)<<2)+((a&8)>>1)+((a&16)>>3)+((a&32)>>5);
+						switch (a){
+							case 1://SNRM
+								printf("SNRM");
+								break;
+							case 27://SNRME
+								printf("SNRME");
+								break;
+							case 28://SABM
+								printf("SABM");
+								break;
+							case 30://SABME
+								printf("SABME");
+								break;
+							case 0://UI
+								printf("UI");
+								break;
+							case 6://-
+								printf("-");
+								break;
+							case 2://DISC
+								printf("DISC");
+								break;
+							case 16://SIM
+								printf("SIM");
+								break;
+							case 4://UP
+								printf("UP");
+								break;
+							case 25://RSET
+								printf("RSET");
+								break;
+							case 29://XID
+								printf("XID");
+								break;
+							case 17://FRMR
+								printf("FRMR");
+								break;
+							default://?
+								printf("?");
+								break;
+						}
+						printf(":");
+						intbin(a,8);
 
+						break;
+						
+				}
+				break;
+		}
 
+		i++;
 
-void ICMP(unsigned short tipo, const struct pcap_pkthdr *header,const u_char *pkt_data){
-	printf("-Tipo:");
-	switch (pkt_data[14]){
-
-		case 0:	
-			printf("Respuesta de eco\n");
-			printf("\tSin Codigo (0)");
-			break;
-
-		case 3:	
-			printf("Destino inalcanzable\n");
-			switch(pkt_data[15]){
-				case 0:	
-					printf("\tRed inalcanzable"); 
-					break;
-				case 1:	
-					printf("\tHost inalcanzable"); 
-					break;
-				case 2:	
-					printf("\tProtocolo inalcanzable"); 
-					break;
-				case 3:	
-					printf("\tPuerto inalcanzable"); 
-					break;
-				case 4:	
-					printf("\tSe necesita fragmentación y no Fragmento fue establecido"); 
-					break;
-				case 5:	
-					printf("\tRuta de origen fallida"); 
-					break;
-				case 6:	
-					printf("\tRed de destino desconocida"); 
-					break;
-				case 7:	
-					printf("\tHost de destino desconocido"); 
-					break;
-				case 8:	
-					printf("\tHost de origen aislado"); 
-					break;
-				case 9:	
-					printf("\tComunicación con el destino La red está prohibida administrativamente"); 
-					break;
-				case 10:	
-					printf("\tLa comunicación con el host de destino es Prohibido administrativamente"); 
-					break;
-				case 11:	
-					printf("\tRed de destino inaccesible para el tipo de servicio"); 
-					break;
-				case 12:	
-					printf("\tHost de destino inalcanzable para el tipo de Servicio"); 
-					break;
-				case 13:	
-					printf("\tComunicación prohibida administrativamente"); 
-					break;
-				case 14:	
-					printf("\tViolación de la precedencia del host"); 
-					break;
-				case 15:	
-					printf("\tCorte de precedencia en efecto"); 
-					break;
-				default:
-					printf("\tSin asignar");
-					break;
-			}
-			break;
-
-		case 4:	
-			printf("Enfriamiento de fuente (obsoleto)\n");
-			printf("\tSin Codigo (0)");
-			break;
-		case 5:	
-			printf("Redirigir\n");
-			switch (pkt_data[15]){
-				case 0:	
-					printf("\tRedirigir datagrama para la red (o subred)");
-					break;
-				case 1:	
-					printf("\tRedirigir datagrama para el host");
-					break;
-				case 2:	
-					printf("\tRedirigir datagrama para el tipo de servicio y red");
-					break;
-				case 3:	
-					printf("\tRedirigir datagrama para el tipo de servicio y host");
-					break;
-				default:
-					printf("\tSin asignar");
-					break;
-			}
-			break;
-		case 6:	
-			printf("Dirección de host alternativa (obsoleta)\n");
-			printf("\tDireccion alternativa para el anfitrion (0)");
-			break;
-		case 8:	
-			printf("Eco\n");
-			printf("\tSin Codigo (0)");
-			break;
-		case 9:	
-			printf("Anuncio de enrutador\n");
-			switch (pkt_data[15]){
-				case 0: 	
-					printf("\tAnuncio de enrutador normal"); 
-					break;
-				case 16: 	
-					printf("\tNo enruta el tráfico común "); 
-					break;
-				default:
-					printf("\tSin asignar");
-					break;
-			}
-			break;
-		case 10:	
-			printf("Solicitud de enrutador\n");
-			printf("\tSin Codigo (0)");
-			break;
-		case 11:	
-			printf("Tiempo excedido\n");
-			switch (pkt_data[15]){
-				case 0: 	
-					printf("\tTiempo de vida excedido en tránsito ");
-					break;
-				case 1: 	
-					printf("\tSe excedió el tiempo de reensamblado del fragmento");
-					break;
-				default:
-					printf("\tSin asignar");
-					break;
-			}
-			break;
-		case 12:	
-			printf("Problema de parámetro\n");
-			switch (pkt_data[15]){
-				case 0:
-					prinft("\tEl puntero indica el error");
-					break;
-				case 1:
-					prinft("\tFalta una opción requerida");
-					break;
-				case 2:
-					prinft("\tMala longitud ");
-					break;
-				default:
-					printf("\tSin asignar");
-					break;
-			}
-			break;
-		case 13:	
-			printf("Marca de tiempo");
-			printf("\n\tSin Codigo (0)");
-			break;
-		case 14:	
-			printf("Respuesta de marca de tiempo");
-			printf("\n\tSin Codigo (0)");
-			break;
-		case 15:	
-			printf("Solicitud de información (obsoleta)");
-			printf("\n\tSin Codigo (0)");
-			break;
-		case 16:	
-			printf("Respuesta de información (obsoleta)");
-			printf("\n\tSin Codigo (0)");
-			break;
-		case 17:	
-			printf("Solicitud de máscara de dirección (obsoleta)");
-			printf("\n\tSin Codigo (0)");
-			break;
-		case 18:	
-			printf("Respuesta de máscara de dirección (obsoleta)");
-			printf("\n\tSin Codigo (0)");
-			break;
-		case 19:	
-			printf("Reservado (por seguridad)");
-			printf("\n\tReservado");
-			break;
-		case 20:	
-			printf("Reservado (para el experimento de robustez)");
-			printf("\n\tReservado");
-			break;
-		case 21:	
-			printf("Reservado (para el experimento de robustez)");
-			printf("\n\tReservado");
-			break;
-		case 22:	
-			printf("Reservado (para el experimento de robustez)");
-			printf("\n\tReservado");
-			break;
-		case 23:	
-			printf("Reservado (para el experimento de robustez)");
-			printf("\n\tReservado");
-			break;
-		case 24:	
-			printf("Reservado (para el experimento de robustez)");
-			printf("\n\tReservado");
-			break;
-		case 25:	
-			printf("Reservado (para el experimento de robustez)");
-			printf("\n\tReservado");
-			break;
-		case 26:	
-			printf("Reservado (para el experimento de robustez)");
-			printf("\n\tReservado");
-			break;
-		case 27:	
-			printf("Reservado (para el experimento de robustez)");
-			printf("\n\tReservado");
-			break;
-		case 28:	
-			printf("Reservado (para el experimento de robustez)");
-			printf("\n\tReservado");
-			break;
-		case 29:	
-			printf("Reservado (para el experimento de robustez)");
-			printf("\n\tReservado");
-			break;
-		case 30:	
-			printf("Traceroute (obsoleto)");
-			printf("\n\tSin registro");
-			break;
-		case 31:	
-			printf("Error de conversión de datagrama (obsoleto)");
-			printf("\n\tSin registro");
-			break;
-		case 32:	
-			printf("Redirección de host móvil (obsoleto)");
-			printf("\n\tSin registro");
-			break;
-		case 33:	
-			printf("IPv6 Where-Are-You (obsoleto)");
-			printf("\n\tSin registro");
-			break;
-		case 34:	
-			printf("IPv6 Estoy aquí (obsoleto)");
-			printf("\n\tSin registro");
-			break;
-		case 35:	
-			printf("Solicitud de registro móvil (obsoleta)");
-			printf("\n\tSin registro");
-			break;
-		case 36:	
-			printf("Respuesta de registro móvil (obsoleto)");
-			printf("\n\tSin registro");
-			break;
-		case 37:	
-			printf("Solicitud de nombre de dominio (obsoleta)");
-			printf("\n\tSin registro");
-			break;
-		case 38:	
-			printf("Respuesta de nombre de dominio (obsoleto)");
-			printf("\n\tSin registro");
-			break;
-		case 39:	
-			printf("SKIP (obsoleto)");
-			printf("\n\tSin registro");
-			break;
-		case 40:	
-			printf("Photuris");
-			switch (pkt_data[15]){
-				case 0: 	
-					printf("\n\tSPI incorrecto");
-					break;
-				case 1: 	
-					printf("\n\tAutenticación fallida");
-					break;
-				case 2: 	
-					printf("\n\tFalló la descompresión");
-					break;
-				case 3: 	
-					printf("\n\tFalló el descifrado");
-					break;
-				case 4: 	
-					printf("\n\tNecesita autenticación");
-					break;
-				case 5: 	
-					printf("\n\tNecesita autorización");
-					break;
-				default:
-					printf("\n\tSin asignar");
-					break;
-			}
-			break;
-		case 41:	
-			printf("Mensajes ICMP utilizados por protocolos de movilidad experimentales como Seamoby");
-			printf("\n\tSin registro");
-			break;
-		case 42:	
-			printf("Solicitud de eco extendida");
-			if(pkt_data[15]==0)
-				printf("\n\tNo error");
-			else
-				printf("\n\tSin asignar");
-			break;
-		case 43:	
-			printf("Respuesta de eco extendida");
-			switch (pkt_data[15]){
-				case 0:
-					printf("\n\tNo Error");
-					break;
-				case 1:
-					printf("\n\tConsulta con formato incorrecto");
-					break;
-				case 2:
-					printf("\n\tNo hay tal interfaz");
-					break;
-				case 3:
-					printf("\n\tNo hay tal entrada de tabla");
-					break;
-				case 4:
-					printf("\n\tMúltiples interfaces satisfacen la consulta");
-					break;
-				default:
-					printf("\n\tSin asignar");
-					break;
-			}
-			break;
-		case 253:	
-			printf("Experimento 1 al estilo RFC3692");
-			prinft("\n\tSin registro");
-			break;
-		case 254:	
-			printf("Experimento 2 al estilo RFC3692");
-			prinft("\n\tSin registro");
-			break;
-		case 255:	
-			printf("Reservado");
-			prinft("\n\tSin registro");
-			break;
-		default:
-			printf("Sin asignar");
-			break;
+		printf("\nInformacion:\n");
+		for (i; (i < header->caplen-4 ) ; i++){
+			printf("%.2x ", pkt_data[i]);
+			if ( (i % 16) == 0) printf("\n");
+		}
+		
+		printf("\nCRC:\n");
+		for (i; (i < header->caplen ) ; i++){
+			printf("%.2x ", pkt_data[i]);
+			if ( (i % 16) == 0) printf("\n");
+		}
+	
 	}
-	printf("\n-Chesum (decimal):%d\n",pkt_data[16]*256+pkt_data[17]);
-	printf("-Opciones:\n");
-	for(int i=18;i<header->len;i++){
-		printf("%02X ",pkt_data[i]);
-		if(i%4==3)
-			printf("\n");
+
+	else{//tomar 1 byte de vínculo lógico de control
+		a=pkt_data[i]&1;
+		switch(a){
+			case 0://I
+				printf("Trama I->");
+				a=(pkt_data[i]>>1)&7;
+				printf("\n\t\tNumero de secuencia de la trama enviada:");
+				intbin(a,8);
+				printf("\n\t\tNumero de secuencia de la proxima trama esperada:");
+				a=(pkt_data[i]>>5)&7;
+				intbin(a,8);
+				break;
+				
+			case 1:
+				switch((pkt_data[i]&2)>>1){
+					case 0://S
+						printf("Trama S->");
+						a=(pkt_data[i]>>2)&3;
+						printf("\n\t\tCodigo:");
+						intbin(a,8);
+						a=(pkt_data[i]>>5)&7;
+						printf("\n\t\tNumero de secuencia de la proxima trama esperada:");
+						intbin(a,8);
+						break;
+				
+					case 1://U
+						printf("Trama U->");	
+						a=pkt_data[i]>>2;
+						a=((a&1)<<4)+((a&2)<<2)+((a&8)>>1)+((a&16)>>3)+((a&32)>>5);
+						switch (a){
+							case 1://SNRM
+								printf("SNRM");
+								break;
+							case 27://SNRME
+								printf("SNRME");
+								break;
+							case 28://SABM
+								printf("SABM");
+								break;
+							case 30://SABME
+								printf("SABME");
+								break;
+							case 0://UI
+								printf("UI");
+								break;
+							case 6://-
+								printf("-");
+								break;
+							case 2://DISC
+								printf("DISC");
+								break;
+							case 16://SIM
+								printf("SIM");
+								break;
+							case 4://UP
+								printf("UP");
+								break;
+							case 25://RSET
+								printf("RSET");
+								break;
+							case 29://XID
+								printf("XID");
+								break;
+							case 17://FRMR
+								printf("FRMR");
+								break;
+							default://?
+								printf("?");
+								break;
+						}
+						printf(":");
+						intbin(a,8);
+
+						break;
+						
+				}
+				break;
+		}
+		printf("\n\t\tP/F:%d",(a&4)>>2);
+		i++;
+
+		printf("\nInformacion:\n");
+		for (i; (i < header->caplen-4 ) ; i++){
+			printf("%.2x ", pkt_data[i]);
+			if ( (i % 16) == 0) printf("\n");
+		}
+		
+		printf("\nCRC:\n");
+		for (i; (i < header->caplen ) ; i++){
+			printf("%.2x ", pkt_data[i]);
+			if ( (i % 16) == 0) printf("\n");
+		}
 	}
+	
 }
 
-
-void ARP(unsigned short tipo, const struct pcap_pkthdr *header,const u_char *pkt_data){
-    
-	printf("-Tipo de hardware: %02X %02X\n",pkt_data[14],pkt_data[15]);
-	
-	unsigned short tipo_dos = (pkt_data[16]*256)+pkt_data[17];
-	if(tipo_dos==2048)
-		printf("-Tipo de protocolo: %d (Ethernet)   %02X %02X\n",tipo_dos,pkt_data[16],pkt_data[17]);
-	
-	printf("-Longitud de direccion de hardware: %02X (Por direccion MAC)\n",pkt_data[18]);
-	printf("-Longitud de direccion segun el protocolo: %02X (Por direccion IP)\n",pkt_data[19]);
-	
-	printf("-Codigo de operacion: ");
-	switch(pkt_data[21]){
-		case 1:
-			printf("%02X %02X  ARP Request (Solicitud a ARP)",pkt_data[20],pkt_data[21]);
-			break;
-		case 2:
-			printf("%02X %02X  ARP Reply (Respuesta a ARP)",pkt_data[20],pkt_data[21]);
-			break; 
-		case 3:
-			printf("%02X %02X  RARP Request (Solicitud a ARP inverso)",pkt_data[20],pkt_data[21]);
-			break;
-		case 4:
-			printf("%02X %02X  RARP Reply (Respuesta a ARP inverso)",pkt_data[20],pkt_data[21]);
-			break;
-		default:
-			printf("valor no identificado");
-			break;
-	}
-	
-	int j;
-	printf("\n-Direccion del hardware emisor: ");
-	for(j=22;j!=28;j++){
-		printf("%02X",pkt_data[j]); 
-		if(j!=27)printf(":");
-	}
-	//j=28
-	printf("\n-Direccion del emisor segun el protocolo: ");
-	for(j;j!=32;j++){
-		printf("%02X",pkt_data[j]);  
-		if(j!=31)printf(":");
-	}
-	//j=32
-	printf("\n-Direccion del hardware receptor: ");
-	for(j;j!=38;j++){
-		printf("%02X",pkt_data[j]);   
-		if(j!=37)printf(":");
-	}
-	//j=38
-	printf("\n-Direccion del receptor segun el protocolo: ");
-	for(j;j!=42;j++){
-		printf("%02X",pkt_data[j]);   
-		if(j!=41)printf(":");
-	}
-}
-
-
-void IPv4(unsigned short tipo, const struct pcap_pkthdr *header,const u_char *pkt_data){
+void IPv4(unsigned short extra, const struct pcap_pkthdr *header,const u_char *pkt_data){
 	int i=14;
 	//i=14
 	printf("\n-Version:%d\n",pkt_data[i]>>4);
@@ -699,9 +595,12 @@ void IPv4(unsigned short tipo, const struct pcap_pkthdr *header,const u_char *pk
 			break;
 		case 1:
 			printf("Internet Control Message Protocol");
+			ICMP(extra, header,pkt_data);
 			break;
 		case 2:
 			printf("Internet Group Management Protocol");
+			IGMP(extra, header,pkt_data);
+
 			break;
 		case 3:
 			printf("Gateway-to-Gateway Protocol");
@@ -1269,7 +1168,375 @@ void IPv4(unsigned short tipo, const struct pcap_pkthdr *header,const u_char *pk
 	}
 }
 
+	void ICMP(unsigned short extra, const struct pcap_pkthdr *header,const u_char *pkt_data){
+		int i=14;
+		printf("-Tipo:");
+		switch (pkt_data[i++]){
+			case 0:	
+				printf("Respuesta de eco\n");
+				printf("\tSin Codigo (0)");
+				break;
 
-void IPv6(unsigned short tipo, const struct pcap_pkthdr *header,const u_char *pkt_data){
+			case 3:	
+				printf("Destino inalcanzable\n");
+				//i=15
+				switch(pkt_data[i]){
+					case 0:	
+						printf("\tRed inalcanzable"); 
+						break;
+					case 1:	
+						printf("\tHost inalcanzable"); 
+						break;
+					case 2:	
+						printf("\tProtocolo inalcanzable"); 
+						break;
+					case 3:	
+						printf("\tPuerto inalcanzable"); 
+						break;
+					case 4:	
+						printf("\tSe necesita fragmentación y no Fragmento fue establecido"); 
+						break;
+					case 5:	
+						printf("\tRuta de origen fallida"); 
+						break;
+					case 6:	
+						printf("\tRed de destino desconocida"); 
+						break;
+					case 7:	
+						printf("\tHost de destino desconocido"); 
+						break;
+					case 8:	
+						printf("\tHost de origen aislado"); 
+						break;
+					case 9:	
+						printf("\tComunicación con el destino La red está prohibida administrativamente"); 
+						break;
+					case 10:	
+						printf("\tLa comunicación con el host de destino es Prohibido administrativamente"); 
+						break;
+					case 11:	
+						printf("\tRed de destino inaccesible para el tipo de servicio"); 
+						break;
+					case 12:	
+						printf("\tHost de destino inalcanzable para el tipo de Servicio"); 
+						break;
+					case 13:	
+						printf("\tComunicación prohibida administrativamente"); 
+						break;
+					case 14:	
+						printf("\tViolación de la precedencia del host"); 
+						break;
+					case 15:	
+						printf("\tCorte de precedencia en efecto"); 
+						break;
+					default:
+						printf("\tSin asignar");
+						break;
+				}
+				break;
+
+			case 4:	
+				printf("Enfriamiento de fuente (obsoleto)\n");
+				printf("\tSin Codigo (0)");
+				break;
+			case 5:	
+				printf("Redirigir\n");
+				switch (pkt_data[i]){
+					case 0:	
+						printf("\tRedirigir datagrama para la red (o subred)");
+						break;
+					case 1:	
+						printf("\tRedirigir datagrama para el host");
+						break;
+					case 2:	
+						printf("\tRedirigir datagrama para el tipo de servicio y red");
+						break;
+					case 3:	
+						printf("\tRedirigir datagrama para el tipo de servicio y host");
+						break;
+					default:
+						printf("\tSin asignar");
+						break;
+				}
+				break;
+			case 6:	
+				printf("Dirección de host alternativa (obsoleta)\n");
+				printf("\tDireccion alternativa para el anfitrion (0)");
+				break;
+			case 8:	
+				printf("Eco\n");
+				printf("\tSin Codigo (0)");
+				break;
+			case 9:	
+				printf("Anuncio de enrutador\n");
+				switch (pkt_data[i]){
+					case 0: 	
+						printf("\tAnuncio de enrutador normal"); 
+						break;
+					case 16: 	
+						printf("\tNo enruta el tráfico común "); 
+						break;
+					default:
+						printf("\tSin asignar");
+						break;
+				}
+				break;
+			case 10:	
+				printf("Solicitud de enrutador\n");
+				printf("\tSin Codigo (0)");
+				break;
+			case 11:	
+				printf("Tiempo excedido\n");
+				switch (pkt_data[i]){
+					case 0: 	
+						printf("\tTiempo de vida excedido en tránsito ");
+						break;
+					case 1: 	
+						printf("\tSe excedió el tiempo de reensamblado del fragmento");
+						break;
+					default:
+						printf("\tSin asignar");
+						break;
+				}
+				break;
+			case 12:	
+				printf("Problema de parámetro\n");
+				switch (pkt_data[i]){
+					case 0:
+						printf("\tEl puntero indica el error");
+						break;
+					case 1:
+						printf("\tFalta una opción requerida");
+						break;
+					case 2:
+						printf("\tMala longitud ");
+						break;
+					default:
+						printf("\tSin asignar");
+						break;
+				}
+				break;
+			case 13:	
+				printf("Marca de tiempo");
+				printf("\n\tSin Codigo (0)");
+				break;
+			case 14:	
+				printf("Respuesta de marca de tiempo");
+				printf("\n\tSin Codigo (0)");
+				break;
+			case 15:	
+				printf("Solicitud de información (obsoleta)");
+				printf("\n\tSin Codigo (0)");
+				break;
+			case 16:	
+				printf("Respuesta de información (obsoleta)");
+				printf("\n\tSin Codigo (0)");
+				break;
+			case 17:	
+				printf("Solicitud de máscara de dirección (obsoleta)");
+				printf("\n\tSin Codigo (0)");
+				break;
+			case 18:	
+				printf("Respuesta de máscara de dirección (obsoleta)");
+				printf("\n\tSin Codigo (0)");
+				break;
+			case 19:	
+				printf("Reservado (por seguridad)");
+				printf("\n\tReservado");
+				break;
+			case 20:	
+				printf("Reservado (para el experimento de robustez)");
+				printf("\n\tReservado");
+				break;
+			case 21:	
+				printf("Reservado (para el experimento de robustez)");
+				printf("\n\tReservado");
+				break;
+			case 22:	
+				printf("Reservado (para el experimento de robustez)");
+				printf("\n\tReservado");
+				break;
+			case 23:	
+				printf("Reservado (para el experimento de robustez)");
+				printf("\n\tReservado");
+				break;
+			case 24:	
+				printf("Reservado (para el experimento de robustez)");
+				printf("\n\tReservado");
+				break;
+			case 25:	
+				printf("Reservado (para el experimento de robustez)");
+				printf("\n\tReservado");
+				break;
+			case 26:	
+				printf("Reservado (para el experimento de robustez)");
+				printf("\n\tReservado");
+				break;
+			case 27:	
+				printf("Reservado (para el experimento de robustez)");
+				printf("\n\tReservado");
+				break;
+			case 28:	
+				printf("Reservado (para el experimento de robustez)");
+				printf("\n\tReservado");
+				break;
+			case 29:	
+				printf("Reservado (para el experimento de robustez)");
+				printf("\n\tReservado");
+				break;
+			case 30:	
+				printf("Traceroute (obsoleto)");
+				printf("\n\tSin registro");
+				break;
+			case 31:	
+				printf("Error de conversión de datagrama (obsoleto)");
+				printf("\n\tSin registro");
+				break;
+			case 32:	
+				printf("Redirección de host móvil (obsoleto)");
+				printf("\n\tSin registro");
+				break;
+			case 33:	
+				printf("IPv6 Where-Are-You (obsoleto)");
+				printf("\n\tSin registro");
+				break;
+			case 34:	
+				printf("IPv6 Estoy aquí (obsoleto)");
+				printf("\n\tSin registro");
+				break;
+			case 35:	
+				printf("Solicitud de registro móvil (obsoleta)");
+				printf("\n\tSin registro");
+				break;
+			case 36:	
+				printf("Respuesta de registro móvil (obsoleto)");
+				printf("\n\tSin registro");
+				break;
+			case 37:	
+				printf("Solicitud de nombre de dominio (obsoleta)");
+				printf("\n\tSin registro");
+				break;
+			case 38:	
+				printf("Respuesta de nombre de dominio (obsoleto)");
+				printf("\n\tSin registro");
+				break;
+			case 39:	
+				printf("SKIP (obsoleto)");
+				printf("\n\tSin registro");
+				break;
+			case 40:	
+				printf("Photuris");
+				switch (pkt_data[i]){
+					case 0: 	
+						printf("\n\tSPI incorrecto");
+						break;
+					case 1: 	
+						printf("\n\tAutenticación fallida");
+						break;
+					case 2: 	
+						printf("\n\tFalló la descompresión");
+						break;
+					case 3: 	
+						printf("\n\tFalló el descifrado");
+						break;
+					case 4: 	
+						printf("\n\tNecesita autenticación");
+						break;
+					case 5: 	
+						printf("\n\tNecesita autorización");
+						break;
+					default:
+						printf("\n\tSin asignar");
+						break;
+				}
+				break;
+			case 41:	
+				printf("Mensajes ICMP utilizados por protocolos de movilidad experimentales como Seamoby");
+				printf("\n\tSin registro");
+				break;
+			case 42:	
+				printf("Solicitud de eco extendida");
+				if(pkt_data[i]==0)
+					printf("\n\tNo error");
+				else
+					printf("\n\tSin asignar");
+				break;
+			case 43:	
+				printf("Respuesta de eco extendida");
+				switch (pkt_data[i]){
+					case 0:
+						printf("\n\tNo Error");
+						break;
+					case 1:
+						printf("\n\tConsulta con formato incorrecto");
+						break;
+					case 2:
+						printf("\n\tNo hay tal interfaz");
+						break;
+					case 3:
+						printf("\n\tNo hay tal entrada de tabla");
+						break;
+					case 4:
+						printf("\n\tMúltiples interfaces satisfacen la consulta");
+						break;
+					default:
+						printf("\n\tSin asignar");
+						break;
+				}
+				break;
+			case 253:	
+				printf("Experimento 1 al estilo RFC3692");
+				printf("\n\tSin registro");
+				break;
+			case 254:	
+				printf("Experimento 2 al estilo RFC3692");
+				printf("\n\tSin registro");
+				break;
+			case 255:	
+				printf("Reservado");
+				printf("\n\tSin registro");
+				break;
+			default:
+				printf("Sin asignar");
+				break;
+		}
+		i++;
+		printf("\n-Checksum (decimal):%d\n",pkt_data[i++]*256+pkt_data[i++]);
+		printf("-Opciones:\n");
+		while (i<header->len){
+			printf("%02X ",pkt_data[i]);
+			if(i++%4==3)
+				printf("\n");
+		}
+	}
+
+	void IGMP(unsigned short extra, const struct pcap_pkthdr *header,const u_char *pkt_data){
+		printf("IGMP");
+	}
+void IPv6(unsigned short extra, const struct pcap_pkthdr *header,const u_char *pkt_data){
 	printf("Es de tipo IPv6... Nada mas... jejeje...\n");
+}
+
+//Funciones de ayuda__________________________________________________________________________________________________________________________________
+void intbin(int n,int max){
+	int i,m=n;
+	if(n!=0){
+		int aux=1;
+		i=0;
+		while(n){ aux++; n>>=1;}	
+		int arr[aux];
+		n=m;
+		while (n) {
+			arr[aux-1-i++]=n & 1;
+			n >>= 1;
+		}
+        for(i=0;i!=max-aux+1;i++)
+            printf("0");
+		for(i=1;i!=aux;i++)
+			printf("%d",arr[i]);
+	}
+	else
+		for(i=0;i!=max;i++) 
+			printf("0");
+	printf(" (%d)",m);
 }

@@ -210,7 +210,7 @@ void packet_handler(u_char *param, const struct pcap_pkthdr *header, const u_cha
 		//Tipo de protocolo
 			unsigned short tipo = (pkt_data[12]*256)+pkt_data[13];
 			printf("\n+Trama de tipo ");
-			if (tipo<=1500){
+			if (tipo>1500){
 				switch (tipo){
 					case 2048://08 00 IPv4
 						printf("IPv4\n");
@@ -221,7 +221,10 @@ void packet_handler(u_char *param, const struct pcap_pkthdr *header, const u_cha
 						printf("IPv6\n");
 						IPv6(tipo,header,pkt_data);
 						break;
-
+					case 2054://08 06 ARP
+						printf("ARP\n");
+						ARP(tipo,header,pkt_data);
+						break;
 					
 					default:
 						printf("Protocolo no soportado: %02X %02X (%d)\n",pkt_data[12],pkt_data[13],tipo);
@@ -229,13 +232,9 @@ void packet_handler(u_char *param, const struct pcap_pkthdr *header, const u_cha
 				}
 			}
 			else{
+				//Trama IEE
 				switch (tipo){
-					/*						
-					case 2054://08 06 ARP
-						printf("ARP\n");
-						ARP(tipo,header,pkt_data);
-						break;
-					*/
+					LLC(tipo,header,pkt_data);
 					default:
 						printf("Protocolo no soportado o se trata de una trama de datos: %02X %02X (%d)\n",pkt_data[12],pkt_data[13],tipo);
 						break;
@@ -246,213 +245,60 @@ void packet_handler(u_char *param, const struct pcap_pkthdr *header, const u_cha
 
 //Catalogo de protocolos interpretables__________________________________________________________________________________________________________________________________
 void ARP(unsigned short extra, const struct pcap_pkthdr *header,const u_char *pkt_data){
-	int i=14;
-	int tl=pkt_data[i++]+pkt_data[i++];
 	
-    printf("-DSAP:");intbin(pkt_data[i],8);
-    	
-	printf("\n\tDireccion destino:");intbin(pkt_data[i]>>1,7);
-	int a=pkt_data[i++]&1;
-	printf("\n\t\tI/G:%s(%d)",a? "Grupo":"Individual",a);
+	    
+	printf("-Tipo de hardware: %02X %02X\n",pkt_data[14],pkt_data[15]);
 	
-	printf("\n\tSSAP:");intbin(pkt_data[i],8);
-	printf("\n\t\tDireccion:");intbin(pkt_data[i]>>7,8);
-	a=pkt_data[i++]&1;
-	printf("\n\t\tC/R:%s(%d)\n\t",a? "Respuesta":"Comando",a);   
+	unsigned short tipo_dos = (pkt_data[16]*256)+pkt_data[17];
+	if(tipo_dos==2048)
+		printf("-Tipo de protocolo: %d (Ethernet)   %02X %02X\n",tipo_dos,pkt_data[16],pkt_data[17]);
 	
-	if(tl>3){//tomar 2 bytes de campo de control
-		a=pkt_data[i]&1;
-		switch(a){
-			case 0://I
-				printf("Trama I->");
-				a=(pkt_data[i++]>>1);
-				printf("\n\t\tNumero de secuencia de la trama enviada:");
-				intbin(a,8);
-				a=(pkt_data[i]>>1);
-				printf("\n\t\tNumero de secuencia de la proxima trama esperada:");
-				intbin(a,8);
-				printf("\n\t\tP/F:");
-				intbin(pkt_data[i]&1,8);
-				break;
-				
-			case 1:
-				switch((pkt_data[i]&2)>>1){
-					case 0://S
-						printf("Trama S->");
-						a=(pkt_data[i++]>>2)&3;
-						printf("\n\t\tCodigo:");
-						intbin(a,8);
-						a=(pkt_data[i]>>1);
-						printf("\n\t\tNumero de secuencia de la proxima trama esperada:");
-						intbin(a,8);
-						printf("\n\t\tP/F:");
-						intbin(pkt_data[i]&1,8);
-						break;
-				
-					case 1://U
-						printf("Trama U->");	
-						a=pkt_data[i]>>2;
-						a=((a&1)<<4)+((a&2)<<2)+((a&8)>>1)+((a&16)>>3)+((a&32)>>5);
-						switch (a){
-							case 1://SNRM
-								printf("SNRM");
-								break;
-							case 27://SNRME
-								printf("SNRME");
-								break;
-							case 28://SABM
-								printf("SABM");
-								break;
-							case 30://SABME
-								printf("SABME");
-								break;
-							case 0://UI
-								printf("UI");
-								break;
-							case 6://-
-								printf("-");
-								break;
-							case 2://DISC
-								printf("DISC");
-								break;
-							case 16://SIM
-								printf("SIM");
-								break;
-							case 4://UP
-								printf("UP");
-								break;
-							case 25://RSET
-								printf("RSET");
-								break;
-							case 29://XID
-								printf("XID");
-								break;
-							case 17://FRMR
-								printf("FRMR");
-								break;
-							default://?
-								printf("?");
-								break;
-						}
-						printf(":");
-						intbin(a,8);
-
-						break;
-						
-				}
-				break;
-		}
-
-		i++;
-
-		printf("\nInformacion:\n");
-		for (i; (i < header->caplen-4 ) ; i++){
-			printf("%.2x ", pkt_data[i]);
-			if ( (i % 16) == 0) printf("\n");
-		}
-		
-		printf("\nCRC:\n");
-		for (i; (i < header->caplen ) ; i++){
-			printf("%.2x ", pkt_data[i]);
-			if ( (i % 16) == 0) printf("\n");
-		}
+	printf("-Longitud de direccion de hardware: %02X (Por direccion MAC)\n",pkt_data[18]);
+	printf("-Longitud de direccion segun el protocolo: %02X (Por direccion IP)\n",pkt_data[19]);
 	
-	}
-
-	else{//tomar 1 byte de vínculo lógico de control
-		a=pkt_data[i]&1;
-		switch(a){
-			case 0://I
-				printf("Trama I->");
-				a=(pkt_data[i]>>1)&7;
-				printf("\n\t\tNumero de secuencia de la trama enviada:");
-				intbin(a,8);
-				printf("\n\t\tNumero de secuencia de la proxima trama esperada:");
-				a=(pkt_data[i]>>5)&7;
-				intbin(a,8);
-				break;
-				
-			case 1:
-				switch((pkt_data[i]&2)>>1){
-					case 0://S
-						printf("Trama S->");
-						a=(pkt_data[i]>>2)&3;
-						printf("\n\t\tCodigo:");
-						intbin(a,8);
-						a=(pkt_data[i]>>5)&7;
-						printf("\n\t\tNumero de secuencia de la proxima trama esperada:");
-						intbin(a,8);
-						break;
-				
-					case 1://U
-						printf("Trama U->");	
-						a=pkt_data[i]>>2;
-						a=((a&1)<<4)+((a&2)<<2)+((a&8)>>1)+((a&16)>>3)+((a&32)>>5);
-						switch (a){
-							case 1://SNRM
-								printf("SNRM");
-								break;
-							case 27://SNRME
-								printf("SNRME");
-								break;
-							case 28://SABM
-								printf("SABM");
-								break;
-							case 30://SABME
-								printf("SABME");
-								break;
-							case 0://UI
-								printf("UI");
-								break;
-							case 6://-
-								printf("-");
-								break;
-							case 2://DISC
-								printf("DISC");
-								break;
-							case 16://SIM
-								printf("SIM");
-								break;
-							case 4://UP
-								printf("UP");
-								break;
-							case 25://RSET
-								printf("RSET");
-								break;
-							case 29://XID
-								printf("XID");
-								break;
-							case 17://FRMR
-								printf("FRMR");
-								break;
-							default://?
-								printf("?");
-								break;
-						}
-						printf(":");
-						intbin(a,8);
-
-						break;
-						
-				}
-				break;
-		}
-		printf("\n\t\tP/F:%d",(a&4)>>2);
-		i++;
-
-		printf("\nInformacion:\n");
-		for (i; (i < header->caplen-4 ) ; i++){
-			printf("%.2x ", pkt_data[i]);
-			if ( (i % 16) == 0) printf("\n");
-		}
-		
-		printf("\nCRC:\n");
-		for (i; (i < header->caplen ) ; i++){
-			printf("%.2x ", pkt_data[i]);
-			if ( (i % 16) == 0) printf("\n");
-		}
+	printf("-Codigo de operacion: ");
+	switch(pkt_data[21]){
+		case 1:
+			printf("%02X %02X  ARP Request (Solicitud a ARP)",pkt_data[20],pkt_data[21]);
+			break;
+		case 2:
+			printf("%02X %02X  ARP Reply (Respuesta a ARP)",pkt_data[20],pkt_data[21]);
+			break; 
+		case 3:
+			printf("%02X %02X  RARP Request (Solicitud a ARP inverso)",pkt_data[20],pkt_data[21]);
+			break;
+		case 4:
+			printf("%02X %02X  RARP Reply (Respuesta a ARP inverso)",pkt_data[20],pkt_data[21]);
+			break;
+		default:
+			printf("valor no identificado");
+			break;
 	}
 	
+	int j;
+	printf("\n-Direccion del hardware emisor: ");
+	for(j=22;j!=28;j++){
+		printf("%02X",pkt_data[j]); 
+		if(j!=27)printf(":");
+	}
+	//j=28
+	printf("\n-Direccion del emisor segun el protocolo: ");
+	for(j;j!=32;j++){
+		printf("%02X",pkt_data[j]);  
+		if(j!=31)printf(":");
+	}
+	//j=32
+	printf("\n-Direccion del hardware receptor: ");
+	for(j;j!=38;j++){
+		printf("%02X",pkt_data[j]);   
+		if(j!=37)printf(":");
+	}
+	//j=38
+	printf("\n-Direccion del receptor segun el protocolo: ");
+	for(j;j!=42;j++){
+		printf("%02X",pkt_data[j]);   
+		if(j!=41)printf(":");
+	}
 }
 
 void IPv4(unsigned short extra, const struct pcap_pkthdr *header,const u_char *pkt_data){
@@ -1513,8 +1359,219 @@ void IPv4(unsigned short extra, const struct pcap_pkthdr *header,const u_char *p
 	void IGMP(unsigned short extra, const struct pcap_pkthdr *header,const u_char *pkt_data){
 		printf("IGMP");
 	}
+
 void IPv6(unsigned short extra, const struct pcap_pkthdr *header,const u_char *pkt_data){
 	printf("Es de tipo IPv6... Nada mas... jejeje...\n");
+}
+
+void LLC(unsigned short extra, const struct pcap_pkthdr *header,const u_char *pkt_data){
+	int i=14;
+	int tl=pkt_data[i++]+pkt_data[i++];
+	
+    printf("-DSAP:");intbin(pkt_data[i],8);
+    	
+	printf("\n\tDireccion destino:");intbin(pkt_data[i]>>1,7);
+	int a=pkt_data[i++]&1;
+	printf("\n\t\tI/G:%s(%d)",a? "Grupo":"Individual",a);
+	
+	printf("\n\tSSAP:");intbin(pkt_data[i],8);
+	printf("\n\t\tDireccion:");intbin(pkt_data[i]>>7,8);
+	a=pkt_data[i++]&1;
+	printf("\n\t\tC/R:%s(%d)\n\t",a? "Respuesta":"Comando",a);   
+	
+	if(tl>3){//tomar 2 bytes de campo de control
+		a=pkt_data[i]&1;
+		switch(a){
+			case 0://I
+				printf("Trama I->");
+				a=(pkt_data[i++]>>1);
+				printf("\n\t\tNumero de secuencia de la trama enviada:");
+				intbin(a,8);
+				a=(pkt_data[i]>>1);
+				printf("\n\t\tNumero de secuencia de la proxima trama esperada:");
+				intbin(a,8);
+				printf("\n\t\tP/F:");
+				intbin(pkt_data[i]&1,8);
+				break;
+				
+			case 1:
+				switch((pkt_data[i]&2)>>1){
+					case 0://S
+						printf("Trama S->");
+						a=(pkt_data[i++]>>2)&3;
+						printf("\n\t\tCodigo:");
+						intbin(a,8);
+						a=(pkt_data[i]>>1);
+						printf("\n\t\tNumero de secuencia de la proxima trama esperada:");
+						intbin(a,8);
+						printf("\n\t\tP/F:");
+						intbin(pkt_data[i]&1,8);
+						break;
+				
+					case 1://U
+						printf("Trama U->");	
+						a=pkt_data[i]>>2;
+						a=((a&1)<<4)+((a&2)<<2)+((a&8)>>1)+((a&16)>>3)+((a&32)>>5);
+						switch (a){
+							case 1://SNRM
+								printf("SNRM");
+								break;
+							case 27://SNRME
+								printf("SNRME");
+								break;
+							case 28://SABM
+								printf("SABM");
+								break;
+							case 30://SABME
+								printf("SABME");
+								break;
+							case 0://UI
+								printf("UI");
+								break;
+							case 6://-
+								printf("-");
+								break;
+							case 2://DISC
+								printf("DISC");
+								break;
+							case 16://SIM
+								printf("SIM");
+								break;
+							case 4://UP
+								printf("UP");
+								break;
+							case 25://RSET
+								printf("RSET");
+								break;
+							case 29://XID
+								printf("XID");
+								break;
+							case 17://FRMR
+								printf("FRMR");
+								break;
+							default://?
+								printf("?");
+								break;
+						}
+						printf(":");
+						intbin(a,8);
+
+						break;
+						
+				}
+				break;
+		}
+
+		i++;
+
+		printf("\nInformacion:\n");
+		for (i; (i < header->caplen-4 ) ; i++){
+			printf("%.2x ", pkt_data[i]);
+			if ( (i % 16) == 0) printf("\n");
+		}
+		
+		printf("\nCRC:\n");
+		for (i; (i < header->caplen ) ; i++){
+			printf("%.2x ", pkt_data[i]);
+			if ( (i % 16) == 0) printf("\n");
+		}
+	
+	}
+
+	else{//tomar 1 byte de vínculo lógico de control
+		a=pkt_data[i]&1;
+		switch(a){
+			case 0://I
+				printf("Trama I->");
+				a=(pkt_data[i]>>1)&7;
+				printf("\n\t\tNumero de secuencia de la trama enviada:");
+				intbin(a,8);
+				printf("\n\t\tNumero de secuencia de la proxima trama esperada:");
+				a=(pkt_data[i]>>5)&7;
+				intbin(a,8);
+				break;
+				
+			case 1:
+				switch((pkt_data[i]&2)>>1){
+					case 0://S
+						printf("Trama S->");
+						a=(pkt_data[i]>>2)&3;
+						printf("\n\t\tCodigo:");
+						intbin(a,8);
+						a=(pkt_data[i]>>5)&7;
+						printf("\n\t\tNumero de secuencia de la proxima trama esperada:");
+						intbin(a,8);
+						break;
+				
+					case 1://U
+						printf("Trama U->");	
+						a=pkt_data[i]>>2;
+						a=((a&1)<<4)+((a&2)<<2)+((a&8)>>1)+((a&16)>>3)+((a&32)>>5);
+						switch (a){
+							case 1://SNRM
+								printf("SNRM");
+								break;
+							case 27://SNRME
+								printf("SNRME");
+								break;
+							case 28://SABM
+								printf("SABM");
+								break;
+							case 30://SABME
+								printf("SABME");
+								break;
+							case 0://UI
+								printf("UI");
+								break;
+							case 6://-
+								printf("-");
+								break;
+							case 2://DISC
+								printf("DISC");
+								break;
+							case 16://SIM
+								printf("SIM");
+								break;
+							case 4://UP
+								printf("UP");
+								break;
+							case 25://RSET
+								printf("RSET");
+								break;
+							case 29://XID
+								printf("XID");
+								break;
+							case 17://FRMR
+								printf("FRMR");
+								break;
+							default://?
+								printf("?");
+								break;
+						}
+						printf(":");
+						intbin(a,8);
+
+						break;
+						
+				}
+				break;
+		}
+		printf("\n\t\tP/F:%d",(a&4)>>2);
+		i++;
+
+		printf("\nInformacion:\n");
+		for (i; (i < header->caplen-4 ) ; i++){
+			printf("%.2x ", pkt_data[i]);
+			if ( (i % 16) == 0) printf("\n");
+		}
+		
+		printf("\nCRC:\n");
+		for (i; (i < header->caplen ) ; i++){
+			printf("%.2x ", pkt_data[i]);
+			if ( (i % 16) == 0) printf("\n");
+		}
+	}
+	
 }
 
 //Funciones de ayuda__________________________________________________________________________________________________________________________________

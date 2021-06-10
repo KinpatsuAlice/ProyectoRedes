@@ -1,4 +1,4 @@
-//interfaz 3
+///interfaz 3
 #ifdef _MSC_VER
 /*
  * we do not want the warnings about the old Depreciado and unsecure CRT functions
@@ -8,7 +8,23 @@
 #endif
 
 #include <pcap.h>
+#include <conio.h>
 
+typedef struct datos{
+	int ipv4;
+		int icmp;
+		int igmp;
+	int ipv6;
+	int arp;
+	int llc;
+	//int tcp;
+	//int utp
+}estadisticas;
+
+estadisticas *stats;
+
+char* filtro;
+short estad_is_0;
 
 /* prototype of the packet handler */
 void packet_handler(u_char *param, const struct pcap_pkthdr *header, const u_char *pkt_data);
@@ -23,9 +39,11 @@ int main(){
 		scanf("%d",&op);
 		switch (op){
 		case 1:
+			system("cls");
 			Archivo();
 			break;
 		case 2:
+			system("cls");
 			Sniffer();
 			break;
 		case 3:
@@ -87,7 +105,12 @@ int Archivo(){
 	int cantidad;
 	printf("\nEscribir cuantos paquetes se desean analizar:\n");
 	scanf("%d",cantidad);
-    pcap_loop(fp, cantidad, packet_handler, NULL);
+	printf("\nEscribir el numero del protocolo a filtrar [en decimal]\n(-1:sin filtro)\n");
+	while (cantidad>0){
+    	pcap_loop(fp, 1, packet_handler, NULL);
+		
+	}
+	
 
     return 0;
 
@@ -102,15 +125,13 @@ int Sniffer(){
 	char errbuf[PCAP_ERRBUF_SIZE];
 	
 	/* Retrieve the device list */
-	if(pcap_findalldevs(&alldevs, errbuf) == -1)
-	{
+	if(pcap_findalldevs(&alldevs, errbuf) == -1){
 		fprintf(stderr,"Error en pcap_findalldevs: %s\n", errbuf);
 		exit(1);
 	}
 	
 	/* Print the list */
-	for(d=alldevs; d; d=d->next)
-	{
+	for(d=alldevs; d; d=d->next){
 		printf("%d. %s", ++i, d->name);
 		if (d->description)
 			printf(" (%s)\n", d->description);
@@ -118,8 +139,7 @@ int Sniffer(){
 			printf(" (Descripcion no disponible)\n");
 	}
 	
-	if(i==0)
-	{
+	if(i==0){
 		printf("\nNo se encontraron interfaces, asegurese que WinPcap esta instalado.\n");
 		return -1;
 	}
@@ -127,8 +147,7 @@ int Sniffer(){
 	printf("Ingresa el numero de interfaz (1-%d):",i);
 	scanf("%d", &inum);
 	
-	if(inum < 1 || inum > i)
-	{
+	if(inum < 1 || inum > i){
 		printf("\nNumero de interfaz fuerda de rango.\n");
 		/* Free the device list */
 		pcap_freealldevs(alldevs);
@@ -146,34 +165,69 @@ int Sniffer(){
 							 1,				// promiscuous mode (nonzero means promiscuous)
 							 1000,			// read timeout
 							 errbuf			// error buffer
-							 )) == NULL)
-	{
+							 )) == NULL){
 		fprintf(stderr,"\nIncapaz de abrir el adaptador. %s no es compatible con WinPcap\n", d->name);
 		/* Free the device list */
 		pcap_freealldevs(alldevs);
 		return -1;
 	}
 	
-	printf("\nEscuchando en %s...\n\n", d->description);
+	printf("\nEscuchando en %s...\n", d->description);
 	
 	/* At this point, we don't need any more the device list. Free it */
 	pcap_freealldevs(alldevs);
 	
 	/* start the capture */
-	int cantidad;
-	printf("\nEscribir cuantos paquetes se desean analizar:\n");
-	scanf("%d",cantidad);
-	pcap_loop(adhandle, cantidad, packet_handler, NULL);
-	pcap_close(adhandle);
+	int intaux;
+	printf("1.Anadir filtro\n0.Sin filtro (estadisticas)\n");
+	scanf("%d",&intaux);
+	estad_is_0=intaux;
+	if(intaux==1)
+		;
+		//codigo de pcap_compile()
+	else{
+		printf("\nEscribir cuantos paquetes se desean analizar:\n");
+		scanf("%d",&intaux);
+		system("cls");
+		stats=(estadisticas*)(malloc(sizeof(estadisticas)));
+		stats->ipv4=0;
+		stats->icmp=0;
+		stats->igmp=0;
+		stats->ipv6=0;
+		stats->arp=0;
+		stats->llc=0;
+		pcap_loop(adhandle, intaux, packet_handler, NULL);
+		pcap_close(adhandle);
+		puts("Presiona una tecla para continuar");
+		getch() ;
+	}
+
+
 	return 0;
 }
 
 /* Callback function invoked by libpcap for every incoming packet */
 void packet_handler(u_char *param, const struct pcap_pkthdr *header, const u_char *pkt_data){
+
+	unsigned short tipo = (pkt_data[12]*256)+pkt_data[13];
+	
 	struct tm *ltime;
 	char timestr[16];
 	time_t local_tv_sec;
+	printf("Trama completa:\n");
+	int a;
+	for(a=0;a!=header->len;a++){
+		if(a%16==0)
+			printf("\t");
+		printf("%02X ",pkt_data[a]);
+		if(a%16==15)
+			printf("\n");
+		if(a%16==7)
+			printf("  ");
 
+	}
+
+	printf("\n\n");
 	//Parametros no usados
 	(VOID)(param);
 	(VOID)(pkt_data);
@@ -181,16 +235,6 @@ void packet_handler(u_char *param, const struct pcap_pkthdr *header, const u_cha
 	local_tv_sec = header->ts.tv_sec;
 
 	//Analisis de encabezado Ethernet_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
-		//Encabezado de Ethernet en crudo
-		    printf("+Encabezado Ethernet completo:\n");
-			int i;
-			for(i=0;i!=14;i++){
-				if(i%4==0)
-					printf("\t");
-				printf("%02X ",pkt_data[i]);
-				if(i%4==3)
-					printf("\n");
-			}
 		//Direccion MAC destino
 			int j=0,k=0;
 			printf("\n+MAC destino:\n");
@@ -208,21 +252,23 @@ void packet_handler(u_char *param, const struct pcap_pkthdr *header, const u_cha
 					printf(":");  
 			}
 		//Tipo de protocolo
-			unsigned short tipo = (pkt_data[12]*256)+pkt_data[13];
 			printf("\n+Trama de tipo ");
 			if (tipo>1500){
 				switch (tipo){
 					case 2048://08 00 IPv4
 						printf("IPv4\n");
+						registrar(tipo,0);
 						IPv4(tipo,header,pkt_data);
 						break;
 
 					case 34525://86 DD IPv6
 						printf("IPv6\n");
+						registrar(tipo,0);
 						IPv6(tipo,header,pkt_data);
 						break;
 					case 2054://08 06 ARP
 						printf("ARP\n");
+						registrar(tipo,0);
 						ARP(tipo,header,pkt_data);
 						break;
 					
@@ -233,20 +279,21 @@ void packet_handler(u_char *param, const struct pcap_pkthdr *header, const u_cha
 			}
 			else{
 				//Trama IEE
-				switch (tipo){
-					LLC(tipo,header,pkt_data);
+				switch (tipo,0){
+					//LLC(tipo,header,pkt_data);
 					default:
 						printf("Protocolo no soportado o se trata de una trama de datos: %02X %02X (%d)\n",pkt_data[12],pkt_data[13],tipo);
 						break;
 				}
 			}
-	printf("\n_______________________________________________________________________\n");
+	printf("\n_______________________________________________________________________\n\n");
+	
 }
+
+
 
 //Catalogo de protocolos interpretables__________________________________________________________________________________________________________________________________
 void ARP(unsigned short extra, const struct pcap_pkthdr *header,const u_char *pkt_data){
-	
-	    
 	printf("-Tipo de hardware: %02X %02X\n",pkt_data[14],pkt_data[15]);
 	
 	unsigned short tipo_dos = (pkt_data[16]*256)+pkt_data[17];
@@ -302,11 +349,12 @@ void ARP(unsigned short extra, const struct pcap_pkthdr *header,const u_char *pk
 }
 
 void IPv4(unsigned short extra, const struct pcap_pkthdr *header,const u_char *pkt_data){
-	int i=14;
+	int i=14;//Existe un desface de 1 en el ínidice porque se inicia en 0 en lugar de 1 
 	//i=14
 	printf("\n-Version:%d\n",pkt_data[i]>>4);
 	//i=14
-	printf("-Tamanno de cabecera(IHL):%d\n",pkt_data[i++]&15);
+	int IHL=pkt_data[i++]&15;
+	printf("-Tamanno de cabecera(IHL):%d\n",IHL);
 	//i=15
 	printf("-Tipo de servicio(DSCP):");
 	switch (pkt_data[i]>>2){
@@ -434,19 +482,17 @@ void IPv4(unsigned short extra, const struct pcap_pkthdr *header,const u_char *p
 	//i=22
 	printf("-Tiempo de vida: %d\n",pkt_data[i++]);
 	//i=23
+	int protocolo=pkt_data[i++];
 	printf("-Protocolo:");
-	switch (pkt_data[i++]){
+	switch (protocolo){
 		case 0:
 			printf("IPv6 Hop-by-Hop Option");
 			break;
 		case 1:
 			printf("Internet Control Message Protocol");
-			ICMP(extra, header,pkt_data);
 			break;
 		case 2:
 			printf("Internet Group Management Protocol");
-			IGMP(extra, header,pkt_data);
-
 			break;
 		case 3:
 			printf("Gateway-to-Gateway Protocol");
@@ -998,25 +1044,41 @@ void IPv4(unsigned short extra, const struct pcap_pkthdr *header,const u_char *p
 	   if(j!=3)
 	   	printf(":");
 	}
-	//i=58
+	//i=30
 	printf("\n-Direccion IP de destino:\n");
 	for(j=0;j!=4;j++){
 	   printf("%02X",pkt_data[i++]);
 	   if(j!=3)
 	   	printf(":");
 	}
-	//i=90
+	//i=34
 	printf("\n-Opciones:\n");
-	for(i;i<header->len;i++){
+	for(i;i!=14+IHL*4;i++){
 		printf("%02X ",pkt_data[i]);
 		if(i%4==3)
 			printf("\n");
 	}
+	
+	printf("-Seccion del protocolo:_-_-_-_-_-_-_-_-_-_-_-\n");
+	switch (protocolo){
+		case 1:
+			registrar(protocolo,1);
+			ICMP(i, header,pkt_data);
+			break;
+		case 2:
+			registrar(protocolo,1);
+			IGMP(i, header,pkt_data);
+			break;
+		
+		default:
+			printf("+Protocolo no soportado");
+			break;
+	}
 }
 
 	void ICMP(unsigned short extra, const struct pcap_pkthdr *header,const u_char *pkt_data){
-		int i=14;
-		printf("-Tipo:");
+		int i=extra;
+		printf("+Tipo:");
 		switch (pkt_data[i++]){
 			case 0:	
 				printf("Respuesta de eco\n");
@@ -1025,7 +1087,6 @@ void IPv4(unsigned short extra, const struct pcap_pkthdr *header,const u_char *p
 
 			case 3:	
 				printf("Destino inalcanzable\n");
-				//i=15
 				switch(pkt_data[i]){
 					case 0:	
 						printf("\tRed inalcanzable"); 
@@ -1347,8 +1408,8 @@ void IPv4(unsigned short extra, const struct pcap_pkthdr *header,const u_char *p
 				break;
 		}
 		i++;
-		printf("\n-Checksum (decimal):%d\n",pkt_data[i++]*256+pkt_data[i++]);
-		printf("-Opciones:\n");
+		printf("\n+Checksum (decimal):%d\n",pkt_data[i++]*256+pkt_data[i++]);
+		printf("+Opciones:\n");
 		while (i<header->len){
 			printf("%02X ",pkt_data[i]);
 			if(i++%4==3)
@@ -1576,7 +1637,7 @@ void LLC(unsigned short extra, const struct pcap_pkthdr *header,const u_char *pk
 
 //Funciones de ayuda__________________________________________________________________________________________________________________________________
 void intbin(int n,int max){
-	int i,m=n;
+		int i,m=n;
 	if(n!=0){
 		int aux=1;
 		i=0;
@@ -1597,3 +1658,35 @@ void intbin(int n,int max){
 			printf("0");
 	printf(" (%d)",m);
 }
+
+void registrar(int protocolo, int capa){
+	if(estad_is_0) return;
+	if (capa==0){
+		switch (protocolo){
+		case 1:
+			stats->icmp++;
+			break;
+		case 2:
+			stats->igmp++;
+			break;
+		
+		default:
+			break;
+		}
+	}
+	else{
+		switch (protocolo){
+			case 2048://08 00 IPv4
+				stats->ipv4++;
+				break;
+
+			case 34525://86 DD IPv6
+				stats->ipv6++;
+				break;
+			case 2054://08 06 ARP
+				stats->arp++;
+				break;
+		}
+	}
+}
+

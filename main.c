@@ -184,7 +184,8 @@ int Sniffer(){
 	estad_is_0=intaux;
 	if(intaux==1)
 		;
-		//codigo de pcap_compile()
+		//codigo de 
+	//pcap_compile()
 	else{
 		printf("\nEscribir cuantos paquetes se desean analizar:\n");
 		scanf("%d",&intaux);
@@ -214,6 +215,7 @@ void packet_handler(u_char *param, const struct pcap_pkthdr *header, const u_cha
 	struct tm *ltime;
 	char timestr[16];
 	time_t local_tv_sec;
+
 	printf("Trama completa:\n");
 	int a;
 	for(a=0;a!=header->len;a++){
@@ -266,6 +268,7 @@ void packet_handler(u_char *param, const struct pcap_pkthdr *header, const u_cha
 						registrar(tipo,0);
 						IPv6(tipo,header,pkt_data);
 						break;
+
 					case 2054://08 06 ARP
 						printf("ARP\n");
 						registrar(tipo,0);
@@ -278,7 +281,7 @@ void packet_handler(u_char *param, const struct pcap_pkthdr *header, const u_cha
 				}
 			}
 			else{
-				//Trama IEE
+				//Trama IEEE 802.3
 				switch (tipo,0){
 					//LLC(tipo,header,pkt_data);
 					default:
@@ -286,6 +289,10 @@ void packet_handler(u_char *param, const struct pcap_pkthdr *header, const u_cha
 						break;
 				}
 			}
+
+	//checksum
+	int aux=header->len;
+	printf("Checksum: %ld",(pkt_data[aux-4]<<24)+(pkt_data[aux-3]<<16)+(pkt_data[aux-2]<<8)+(pkt_data[aux-1]));
 	printf("\n_______________________________________________________________________\n\n");
 	
 }
@@ -294,9 +301,361 @@ void packet_handler(u_char *param, const struct pcap_pkthdr *header, const u_cha
 
 //Catalogo de protocolos interpretables__________________________________________________________________________________________________________________________________
 void ARP(unsigned short extra, const struct pcap_pkthdr *header,const u_char *pkt_data){
-	printf("-Tipo de hardware: %02X %02X\n",pkt_data[14],pkt_data[15]);
+	printf("-Tipo de hardware:");
 	
+	switch ((pkt_data[14]<<8)+pkt_data[15]){
+		case 0:
+			printf("Reserved");
+			break;
+		case 1:
+			printf("Ethernet (10Mb)");
+			break;
+		case 2:
+			printf("Experimental Ethernet (3Mb)");
+			break;
+		case 3:
+			printf("Amateur Radio AX.25");
+			break;
+		case 4:
+			printf("Proteon ProNET Token Ring");
+			break;
+		case 5:
+			printf("Chaos");
+			break;
+		case 6:
+			printf("IEEE 802 Networks");
+			break;
+		case 7:
+			printf("ARCNET");
+			break;
+		case 8:
+			printf("Hyperchannel");
+			break;
+		case 9:
+			printf("Lanstar");
+			break;
+		case 10:
+			printf("Autonet Short Address");
+			break;
+		case 11:
+			printf("LocalTalk");
+			break;
+		case 12:
+			printf("LocalNet (IBM PCNet or SYTEK LocalNET)");
+			break;
+		case 13:
+			printf("Ultra link");
+			break;
+		case 14:
+			printf("SMDS");
+			break;
+		case 15:
+			printf("Frame Relay");
+			break;
+		case 16:
+			printf("Asynchronous Transmission Mode (ATM)");
+			break;
+		case 17:
+			printf("HDLC");
+			break;
+		case 18:
+			printf("Fibre Channel");
+			break;
+		case 19:
+			printf("Asynchronous Transmission Mode (ATM)");
+			break;
+		case 20:
+			printf("Serial Line");
+			break;
+		case 21:
+			printf("Asynchronous Transmission Mode (ATM)");
+			break;
+		case 22:
+			printf("MIL-STD-188-220");
+			break;
+		case 23:
+			printf("Metricom");
+			break;
+		case 24:
+			printf("IEEE 1394.1995");
+			break;
+		case 25:
+			printf("MAPOS");
+			break;
+		case 26:
+			printf("Twinaxial");
+			break;
+		case 27:
+			printf("EUI-64");
+			break;
+		case 28:
+			printf("HIPARP");
+			break;
+		case 29:
+			printf("IP and ARP over ISO 7816-3");
+			break;
+		case 30:
+			printf("ARPSec");
+			break;
+		case 31:
+			printf("IPsec tunnel");
+			break;
+		case 32:
+			printf("InfiniBand (TM)");
+			break;
+		case 33:
+			printf("TIA-102 Project 25 Common Air Interface (CAI)");
+			break;
+		case 34:
+			printf("Wiegand Interface");
+			break;
+		case 35:
+			printf("Pure IP");
+			break;
+		case 36:
+			printf("HW_EXP1");
+			break;
+		case 37:
+			printf("HFI");
+			break;
+		case 256:
+			printf("HW_EXP2");
+			break;
+		case 257:
+			printf("AEthernet");
+			break;
+		case 65535:
+			printf("Reserved");
+			break;
+		case 38:
+		case 39:	
+		case 40:	
+		case 41:	
+		case 42:	
+		case 43:	
+		case 44:	
+		case 45:	
+		case 46:	
+		case 47:	
+		case 48:	
+		case 49:	
+		case 50:	
+		case 51:	
+		case 52:	
+		case 53:	
+		case 54:	
+		case 55:	
+		case 56:	
+		case 57:	
+		case 58:	
+		case 59:	
+		case 60:	
+		case 61:	
+		case 62:	
+		case 63:	
+		case 64:	
+		case 65:	
+		case 66:	
+		case 67:	
+		case 68:	
+		case 69:	
+		case 70:	
+		case 71:	
+		case 72:	
+		case 73:	
+		case 74:	
+		case 75:	
+		case 76:	
+		case 77:	
+		case 78:	
+		case 79:	
+		case 80:	
+		case 81:	
+		case 82:	
+		case 83:	
+		case 84:	
+		case 85:	
+		case 86:	
+		case 87:	
+		case 88:	
+		case 89:	
+		case 90:	
+		case 91:	
+		case 92:	
+		case 93:	
+		case 94:	
+		case 95:	
+		case 96:	
+		case 97:	
+		case 98:	
+		case 99:	
+		case 100:	
+		case 101:	
+		case 102:	
+		case 103:	
+		case 104:	
+		case 105:	
+		case 106:	
+		case 107:	
+		case 108:	
+		case 109:	
+		case 110:	
+		case 111:	
+		case 112:	
+		case 113:	
+		case 114:	
+		case 115:	
+		case 116:	
+		case 117:	
+		case 118:	
+		case 119:	
+		case 120:	
+		case 121:	
+		case 122:	
+		case 123:	
+		case 124:	
+		case 125:	
+		case 126:	
+		case 127:	
+		case 128:	
+		case 129:	
+		case 130:	
+		case 131:	
+		case 132:	
+		case 133:	
+		case 134:	
+		case 135:	
+		case 136:	
+		case 137:	
+		case 138:	
+		case 139:	
+		case 140:	
+		case 141:	
+		case 142:	
+		case 143:	
+		case 144:	
+		case 145:	
+		case 146:	
+		case 147:	
+		case 148:	
+		case 149:	
+		case 150:	
+		case 151:	
+		case 152:	
+		case 153:	
+		case 154:	
+		case 155:	
+		case 156:	
+		case 157:	
+		case 158:	
+		case 159:	
+		case 160:	
+		case 161:	
+		case 162:	
+		case 163:	
+		case 164:	
+		case 165:	
+		case 166:	
+		case 167:	
+		case 168:	
+		case 169:	
+		case 170:	
+		case 171:	
+		case 172:	
+		case 173:	
+		case 174:	
+		case 175:	
+		case 176:	
+		case 177:	
+		case 178:	
+		case 179:	
+		case 180:	
+		case 181:	
+		case 182:	
+		case 183:	
+		case 184:	
+		case 185:	
+		case 186:	
+		case 187:	
+		case 188:	
+		case 189:	
+		case 190:	
+		case 191:	
+		case 192:	
+		case 193:	
+		case 194:	
+		case 195:	
+		case 196:	
+		case 197:	
+		case 198:	
+		case 199:	
+		case 200:	
+		case 201:	
+		case 202:	
+		case 203:	
+		case 204:	
+		case 205:	
+		case 206:	
+		case 207:	
+		case 208:	
+		case 209:	
+		case 210:	
+		case 211:	
+		case 212:	
+		case 213:	
+		case 214:	
+		case 215:	
+		case 216:	
+		case 217:	
+		case 218:	
+		case 219:	
+		case 220:	
+		case 221:	
+		case 222:	
+		case 223:	
+		case 224:	
+		case 225:	
+		case 226:	
+		case 227:	
+		case 228:	
+		case 229:	
+		case 230:	
+		case 231:	
+		case 232:	
+		case 233:	
+		case 234:	
+		case 235:	
+		case 236:	
+		case 237:	
+		case 238:	
+		case 239:	
+		case 240:	
+		case 241:	
+		case 242:	
+		case 243:	
+		case 244:	
+		case 245:	
+		case 246:	
+		case 247:	
+		case 248:	
+		case 249:	
+		case 250:	
+		case 251:	
+		case 252:	
+		case 253:	
+		case 254:	
+		case 255:	
+			printf("Sin asignar");
+			break;
+
+		default:
+			printf("Unassigned");
+			break;
+	}
+	
+	printf("\n");
 	unsigned short tipo_dos = (pkt_data[16]*256)+pkt_data[17];
+
 	if(tipo_dos==2048)
 		printf("-Tipo de protocolo: %d (Ethernet)   %02X %02X\n",tipo_dos,pkt_data[16],pkt_data[17]);
 	
@@ -304,24 +663,94 @@ void ARP(unsigned short extra, const struct pcap_pkthdr *header,const u_char *pk
 	printf("-Longitud de direccion segun el protocolo: %02X (Por direccion IP)\n",pkt_data[19]);
 	
 	printf("-Codigo de operacion: ");
-	switch(pkt_data[21]){
-		case 1:
-			printf("%02X %02X  ARP Request (Solicitud a ARP)",pkt_data[20],pkt_data[21]);
+
+	switch ((pkt_data[20]<<8)pkt_data[21]){
+		case 0:	
+			printf("Reserved");
 			break;
-		case 2:
-			printf("%02X %02X  ARP Reply (Respuesta a ARP)",pkt_data[20],pkt_data[21]);
-			break; 
-		case 3:
-			printf("%02X %02X  RARP Request (Solicitud a ARP inverso)",pkt_data[20],pkt_data[21]);
+		case 1:	
+			printf("REQUEST");
 			break;
-		case 4:
-			printf("%02X %02X  RARP Reply (Respuesta a ARP inverso)",pkt_data[20],pkt_data[21]);
+		case 2:	
+			printf("REPLY");
 			break;
-		default:
-			printf("valor no identificado");
+		case 3:	
+			printf("request Reverse");
+			break;
+		case 4:	
+			printf("reply Reverse");
+			break;
+		case 5:	
+			printf("DRARP-Request");
+			break;
+		case 6:	
+			printf("DRARP-Reply");
+			break;
+		case 7:	
+			printf("DRARP-Error");
+			break;
+		case 8:	
+			printf("InARP-Request");
+			break;
+		case 9:	
+			printf("InARP-Reply");
+			break;
+		case 10:	
+			printf("ARP-NAK");
+			break;
+		case 11:	
+			printf("MARS-Request");
+			break;
+		case 12:	
+			printf("MARS-Multi");
+			break;
+		case 13:	
+			printf("MARS-MServ");
+			break;
+		case 14:	
+			printf("MARS-Join");
+			break;
+		case 15:	
+			printf("MARS-Leave");
+			break;
+		case 16:	
+			printf("MARS-NAK");
+			break;
+		case 17:	
+			printf("MARS-Unserv");
+			break;
+		case 18:	
+			printf("MARS-SJoin");
+			break;
+		case 19:	
+			printf("MARS-SLeave");
+			break;
+		case 20:	
+			printf("MARS-Grouplist-Request");
+			break;
+		case 21:	
+			printf("MARS-Grouplist-Reply");
+			break;
+		case 22:	
+			printf("MARS-Redirect-Map");
+			break;
+		case 23:	
+			printf("MAPOS-UNARP");
+			break;
+		case 24:	
+			printf("OP_EXP1");
+			break;
+		case 25:	
+			printf("OP_EXP2");
+			break;
+		case 65535:	
+			printf("Reserved");
+			break;
+		default:	
+			printf("Unassigned");
 			break;
 	}
-	
+
 	int j;
 	printf("\n-Direccion del hardware emisor: ");
 	for(j=22;j!=28;j++){
@@ -1410,7 +1839,7 @@ void IPv4(unsigned short extra, const struct pcap_pkthdr *header,const u_char *p
 		i++;
 		printf("\n+Checksum (decimal):%d\n",pkt_data[i++]*256+pkt_data[i++]);
 		printf("+Opciones:\n");
-		while (i<header->len){
+		while (i<header->len-4){
 			printf("%02X ",pkt_data[i]);
 			if(i++%4==3)
 				printf("\n");

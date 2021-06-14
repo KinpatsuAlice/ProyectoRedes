@@ -664,7 +664,7 @@ void ARP(unsigned short extra, const struct pcap_pkthdr *header,const u_char *pk
 	
 	printf("-Codigo de operacion: ");
 
-	switch ((pkt_data[20]<<8)pkt_data[21]){
+	switch ((pkt_data[20]<<8)+pkt_data[21]){
 		case 0:	
 			printf("Reserved");
 			break;

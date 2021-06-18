@@ -18,7 +18,7 @@ typedef struct datos{
 	int arp;
 	int llc;
 	//int tcp;
-	//int utp
+	//int utp;
 }estadisticas;
 
 estadisticas *stats;
@@ -107,7 +107,7 @@ int Archivo(){
 	scanf("%d",cantidad);
 	printf("\nEscribir el numero del protocolo a filtrar [en decimal]\n(-1:sin filtro)\n");
 	while (cantidad>0){
-    	pcap_loop(fp, 1, packet_handler, NULL);
+    	pcap_loop(fp, 4, packet_handler, NULL);
 		
 	}
 	
@@ -173,7 +173,34 @@ int Sniffer(){
 	}
 	
 	printf("\nEscuchando en %s...\n", d->description);
-	
+
+/*
+	bpf_u_int32 netmask;
+
+	if (d->addresses != NULL)
+        //Retrieve the mask of the first address of the interface 
+        netmask=((struct sockaddr_in *)(d->addresses->netmask))->sin_addr.S_un.S_addr;
+    else
+        //If the interface is without an address we suppose to be in a C class network 
+        netmask=0xffffff; 
+
+	if (pcap_compile(adhandle, &fcode, "ip", 1, netmask) < 0){
+        fprintf(stderr,"\nUnable to compile the packet filter. Check the syntax.\n");
+        //Free the device list 
+        pcap_freealldevs(alldevs);
+        return -1;
+    }
+	    
+	if (pcap_setfilter(adhandle, &fcode) < 0){
+        fprintf(stderr,"\nError setting the filter.\n");
+        //Free the device list 
+        pcap_freealldevs(alldevs);
+        return -1;
+    }
+*/
+
+
+
 	/* At this point, we don't need any more the device list. Free it */
 	pcap_freealldevs(alldevs);
 	
@@ -190,6 +217,7 @@ int Sniffer(){
 		printf("\nEscribir cuantos paquetes se desean analizar:\n");
 		scanf("%d",&intaux);
 		system("cls");
+
 		stats=(estadisticas*)(malloc(sizeof(estadisticas)));
 		stats->ipv4=0;
 		stats->icmp=0;
@@ -197,8 +225,16 @@ int Sniffer(){
 		stats->ipv6=0;
 		stats->arp=0;
 		stats->llc=0;
-		pcap_loop(adhandle, intaux, packet_handler, NULL);
+
+		pcap_loop(adhandle, 50, packet_handler, NULL);
 		pcap_close(adhandle);
+		printf("Estadiscticas:\n")
+printf("\tipv4:%d\n",stats->ipv4);
+printf("\t\ticmp:%d\n",stats->icmp);
+printf("\t\tigmp:%d\n",stats->igmp);
+printf("\tipv6:%d\n",stats->ipv6);
+printf("\tarp:%d\n",stats->arp);
+printf("\tllc:%d\n",stats->llc);
 		puts("Presiona una tecla para continuar");
 		getch() ;
 	}
@@ -301,6 +337,7 @@ void packet_handler(u_char *param, const struct pcap_pkthdr *header, const u_cha
 
 //Catalogo de protocolos interpretables__________________________________________________________________________________________________________________________________
 void ARP(unsigned short extra, const struct pcap_pkthdr *header,const u_char *pkt_data){
+	stats->arp++;
 	printf("-Tipo de hardware:");
 	
 	switch ((pkt_data[14]<<8)+pkt_data[15]){
@@ -778,6 +815,7 @@ void ARP(unsigned short extra, const struct pcap_pkthdr *header,const u_char *pk
 }
 
 void IPv4(unsigned short extra, const struct pcap_pkthdr *header,const u_char *pkt_data){
+	stats->ipv4++;
 	int i=14;//Existe un desface de 1 en el ínidice porque se inicia en 0 en lugar de 1 
 	//i=14
 	printf("\n-Version:%d\n",pkt_data[i]>>4);
@@ -1506,6 +1544,7 @@ void IPv4(unsigned short extra, const struct pcap_pkthdr *header,const u_char *p
 }
 
 	void ICMP(unsigned short extra, const struct pcap_pkthdr *header,const u_char *pkt_data){
+		stats->icmp++;
 		int i=extra;
 		printf("+Tipo:");
 		switch (pkt_data[i++]){
@@ -1847,14 +1886,17 @@ void IPv4(unsigned short extra, const struct pcap_pkthdr *header,const u_char *p
 	}
 
 	void IGMP(unsigned short extra, const struct pcap_pkthdr *header,const u_char *pkt_data){
+		stats->igmp++;
 		printf("IGMP");
 	}
 
 void IPv6(unsigned short extra, const struct pcap_pkthdr *header,const u_char *pkt_data){
+	stats->ipv6++;
 	printf("Es de tipo IPv6... Nada mas... jejeje...\n");
 }
 
 void LLC(unsigned short extra, const struct pcap_pkthdr *header,const u_char *pkt_data){
+	stats->llc;
 	int i=14;
 	int tl=pkt_data[i++]+pkt_data[i++];
 	
@@ -2118,4 +2160,6 @@ void registrar(int protocolo, int capa){
 		}
 	}
 }
+
+
 

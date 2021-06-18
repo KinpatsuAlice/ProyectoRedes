@@ -14,6 +14,8 @@ typedef struct datos{
 	int ipv4;
 		int icmp;
 		int igmp;
+		int udp;
+		int tcp;
 	int ipv6;
 	int arp;
 	int llc;
@@ -32,7 +34,7 @@ void packet_handler(u_char *param, const struct pcap_pkthdr *header, const u_cha
 int main(){
 	int op=1;
 	printf("Bienvenido(a) al interpretador de paquetes");
-
+	stats=(estadisticas*)(malloc(sizeof(estadisticas)));
 	while(1){
 		system("cls");
 		printf("Elija una opcion:\n\t1.Leer un archivo dada una direccion.\n\t2.Atrapar tramas con sniffer\n\t3.Creditos\n\t(Otro num).Salir\n");
@@ -102,15 +104,22 @@ int Archivo(){
     }
 
     // read and dispatch packets until EOF is reached
-	int cantidad;
-	printf("\nEscribir cuantos paquetes se desean analizar:\n");
-	scanf("%d",cantidad);
-	printf("\nEscribir el numero del protocolo a filtrar [en decimal]\n(-1:sin filtro)\n");
-	while (cantidad>0){
-    	pcap_loop(fp, 4, packet_handler, NULL);
-		
+	/* start the capture */
+	int intaux;
+	printf("1.Anadir filtro\n0.Sin filtro\n");
+	scanf("%d",&intaux);
+	estad_is_0=intaux;
+	if(intaux==1){
+		;
+		//codigo de 
+	//pcap_compile()
 	}
-	
+	system("cls");
+	Statsto0();
+	pcap_loop(fp, 0, packet_handler, NULL);
+	PrintStats();
+	puts("Presiona una tecla para continuar");
+	getch() ;
 
     return 0;
 
@@ -206,40 +215,23 @@ int Sniffer(){
 	
 	/* start the capture */
 	int intaux;
-	printf("1.Anadir filtro\n0.Sin filtro (estadisticas)\n");
+	printf("1.Anadir filtro\n0.Sin filtro\n");
 	scanf("%d",&intaux);
 	estad_is_0=intaux;
-	if(intaux==1)
+	if(intaux==1){
 		;
 		//codigo de 
 	//pcap_compile()
-	else{
-		printf("\nEscribir cuantos paquetes se desean analizar:\n");
-		scanf("%d",&intaux);
-		system("cls");
-
-		stats=(estadisticas*)(malloc(sizeof(estadisticas)));
-		stats->ipv4=0;
-		stats->icmp=0;
-		stats->igmp=0;
-		stats->ipv6=0;
-		stats->arp=0;
-		stats->llc=0;
-
-		pcap_loop(adhandle, 50, packet_handler, NULL);
-		pcap_close(adhandle);
-		printf("Estadiscticas:\n")
-printf("\tipv4:%d\n",stats->ipv4);
-printf("\t\ticmp:%d\n",stats->icmp);
-printf("\t\tigmp:%d\n",stats->igmp);
-printf("\tipv6:%d\n",stats->ipv6);
-printf("\tarp:%d\n",stats->arp);
-printf("\tllc:%d\n",stats->llc);
-		puts("Presiona una tecla para continuar");
-		getch() ;
 	}
-
-
+	printf("\nEscribir cuantos paquetes se desean analizar:\n");
+	scanf("%d",&intaux);
+	system("cls");
+	Statsto0();
+	pcap_loop(adhandle,intaux, packet_handler, NULL);
+	pcap_close(adhandle);
+	PrintStats();
+	puts("Presiona una tecla para continuar");
+	getch() ;
 	return 0;
 }
 
@@ -295,19 +287,16 @@ void packet_handler(u_char *param, const struct pcap_pkthdr *header, const u_cha
 				switch (tipo){
 					case 2048://08 00 IPv4
 						printf("IPv4\n");
-						registrar(tipo,0);
 						IPv4(tipo,header,pkt_data);
 						break;
 
 					case 34525://86 DD IPv6
 						printf("IPv6\n");
-						registrar(tipo,0);
 						IPv6(tipo,header,pkt_data);
 						break;
 
 					case 2054://08 06 ARP
 						printf("ARP\n");
-						registrar(tipo,0);
 						ARP(tipo,header,pkt_data);
 						break;
 					
@@ -816,7 +805,7 @@ void ARP(unsigned short extra, const struct pcap_pkthdr *header,const u_char *pk
 
 void IPv4(unsigned short extra, const struct pcap_pkthdr *header,const u_char *pkt_data){
 	stats->ipv4++;
-	int i=14;//Existe un desface de 1 en el ínidice porque se inicia en 0 en lugar de 1 
+	int i=14;//Existe un desface de 1 en el �nidice porque se inicia en 0 en lugar de 1 
 	//i=14
 	printf("\n-Version:%d\n",pkt_data[i]>>4);
 	//i=14
@@ -950,7 +939,7 @@ void IPv4(unsigned short extra, const struct pcap_pkthdr *header,const u_char *p
 	printf("-Tiempo de vida: %d\n",pkt_data[i++]);
 	//i=23
 	int protocolo=pkt_data[i++];
-	printf("-Protocolo:");
+	printf("-Protocolo: (%d)",protocolo);
 	switch (protocolo){
 		case 0:
 			printf("IPv6 Hop-by-Hop Option");
@@ -959,13 +948,13 @@ void IPv4(unsigned short extra, const struct pcap_pkthdr *header,const u_char *p
 			printf("Internet Control Message Protocol");
 			break;
 		case 2:
-			printf("Internet Group Management Protocol");
+			printf("Internet Group Management Protocol\n");
 			break;
 		case 3:
 			printf("Gateway-to-Gateway Protocol");
 			break;
 		case 4:
-			printf("IP en IP (encapsulación)");
+			printf("IP en IP (encapsulacion)");
 			break;
 		case 5:
 			printf("Internet Stream Protocol");
@@ -1118,7 +1107,7 @@ void IPv4(unsigned short extra, const struct pcap_pkthdr *header,const u_char *p
 			printf("NBMA Address Resolution Protocol");
 			break;
 		case 55:
-			printf("IP Móvil (Min Encap)");
+			printf("IP M�vil (Min Encap)");
 			break;
 		case 56:
 			printf("Transport Layer Security Protocol (usa felipendo manejo de llaves Kryptonet)");
@@ -1235,7 +1224,7 @@ void IPv4(unsigned short extra, const struct pcap_pkthdr *header,const u_char *p
 			printf("AX.25");
 			break;
 		case 94:
-			printf("Protocolo de Encapsulación IP-en-IP");
+			printf("Protocolo de Encapsulaci�n IP-en-IP");
 			break;
 		case 95:
 			printf("Mobile Internetworking Control Protocol");
@@ -1247,7 +1236,7 @@ void IPv4(unsigned short extra, const struct pcap_pkthdr *header,const u_char *p
 			printf("Ethernet-within-IP Encapsulation");
 			break;
 		case 98:
-			printf("Cabecera de Encapsulación");
+			printf("Cabecera de Encapsulaci�n");
 			break;
 		case 99:
 			printf("Cualquier esquema privado de cifrado");
@@ -1346,7 +1335,7 @@ void IPv4(unsigned short extra, const struct pcap_pkthdr *header,const u_char *p
 			printf("Secure Packet Shield");
 			break;
 		case 131:
-			printf("Private IP Encapsulation within IP (Encapsulación Privada IP en IP)");
+			printf("Private IP Encapsulation within IP (Encapsulaci�n Privada IP en IP)");
 			break;
 		case 132:
 			printf("Stream Control Transmission Protocol");
@@ -1526,15 +1515,21 @@ void IPv4(unsigned short extra, const struct pcap_pkthdr *header,const u_char *p
 			printf("\n");
 	}
 	
-	printf("-Seccion del protocolo:_-_-_-_-_-_-_-_-_-_-_-\n");
+	printf("-Seccion del protocolo:\n");
 	switch (protocolo){
 		case 1:
-			registrar(protocolo,1);
 			ICMP(i, header,pkt_data);
 			break;
 		case 2:
-			registrar(protocolo,1);
 			IGMP(i, header,pkt_data);
+			break;
+
+		case 17:
+			UDP(i, header,pkt_data);
+			break;
+
+		case 6:
+			TCP(i, header,pkt_data);
 			break;
 		
 		default:
@@ -1569,7 +1564,7 @@ void IPv4(unsigned short extra, const struct pcap_pkthdr *header,const u_char *p
 						printf("\tPuerto inalcanzable"); 
 						break;
 					case 4:	
-						printf("\tSe necesita fragmentación y no Fragmento fue establecido"); 
+						printf("\tSe necesita fragmentaci�n y no Fragmento fue establecido"); 
 						break;
 					case 5:	
 						printf("\tRuta de origen fallida"); 
@@ -1584,10 +1579,10 @@ void IPv4(unsigned short extra, const struct pcap_pkthdr *header,const u_char *p
 						printf("\tHost de origen aislado"); 
 						break;
 					case 9:	
-						printf("\tComunicación con el destino La red está prohibida administrativamente"); 
+						printf("\tComunicaci�n con el destino La red est� prohibida administrativamente"); 
 						break;
 					case 10:	
-						printf("\tLa comunicación con el host de destino es Prohibido administrativamente"); 
+						printf("\tLa comunicaci�n con el host de destino es Prohibido administrativamente"); 
 						break;
 					case 11:	
 						printf("\tRed de destino inaccesible para el tipo de servicio"); 
@@ -1596,10 +1591,10 @@ void IPv4(unsigned short extra, const struct pcap_pkthdr *header,const u_char *p
 						printf("\tHost de destino inalcanzable para el tipo de Servicio"); 
 						break;
 					case 13:	
-						printf("\tComunicación prohibida administrativamente"); 
+						printf("\tComunicaci�n prohibida administrativamente"); 
 						break;
 					case 14:	
-						printf("\tViolación de la precedencia del host"); 
+						printf("\tViolaci�n de la precedencia del host"); 
 						break;
 					case 15:	
 						printf("\tCorte de precedencia en efecto"); 
@@ -1635,7 +1630,7 @@ void IPv4(unsigned short extra, const struct pcap_pkthdr *header,const u_char *p
 				}
 				break;
 			case 6:	
-				printf("Dirección de host alternativa (obsoleta)\n");
+				printf("Direcci�n de host alternativa (obsoleta)\n");
 				printf("\tDireccion alternativa para el anfitrion (0)");
 				break;
 			case 8:	
@@ -1649,7 +1644,7 @@ void IPv4(unsigned short extra, const struct pcap_pkthdr *header,const u_char *p
 						printf("\tAnuncio de enrutador normal"); 
 						break;
 					case 16: 	
-						printf("\tNo enruta el tráfico común "); 
+						printf("\tNo enruta el tr�fico com�n "); 
 						break;
 					default:
 						printf("\tSin asignar");
@@ -1664,10 +1659,10 @@ void IPv4(unsigned short extra, const struct pcap_pkthdr *header,const u_char *p
 				printf("Tiempo excedido\n");
 				switch (pkt_data[i]){
 					case 0: 	
-						printf("\tTiempo de vida excedido en tránsito ");
+						printf("\tTiempo de vida excedido en tr�nsito ");
 						break;
 					case 1: 	
-						printf("\tSe excedió el tiempo de reensamblado del fragmento");
+						printf("\tSe excedi� el tiempo de reensamblado del fragmento");
 						break;
 					default:
 						printf("\tSin asignar");
@@ -1675,13 +1670,13 @@ void IPv4(unsigned short extra, const struct pcap_pkthdr *header,const u_char *p
 				}
 				break;
 			case 12:	
-				printf("Problema de parámetro\n");
+				printf("Problema de par�metro\n");
 				switch (pkt_data[i]){
 					case 0:
 						printf("\tEl puntero indica el error");
 						break;
 					case 1:
-						printf("\tFalta una opción requerida");
+						printf("\tFalta una opci�n requerida");
 						break;
 					case 2:
 						printf("\tMala longitud ");
@@ -1700,19 +1695,19 @@ void IPv4(unsigned short extra, const struct pcap_pkthdr *header,const u_char *p
 				printf("\n\tSin Codigo (0)");
 				break;
 			case 15:	
-				printf("Solicitud de información (obsoleta)");
+				printf("Solicitud de informaci�n (obsoleta)");
 				printf("\n\tSin Codigo (0)");
 				break;
 			case 16:	
-				printf("Respuesta de información (obsoleta)");
+				printf("Respuesta de informaci�n (obsoleta)");
 				printf("\n\tSin Codigo (0)");
 				break;
 			case 17:	
-				printf("Solicitud de máscara de dirección (obsoleta)");
+				printf("Solicitud de m�scara de direcci�n (obsoleta)");
 				printf("\n\tSin Codigo (0)");
 				break;
 			case 18:	
-				printf("Respuesta de máscara de dirección (obsoleta)");
+				printf("Respuesta de m�scara de direcci�n (obsoleta)");
 				printf("\n\tSin Codigo (0)");
 				break;
 			case 19:	
@@ -1764,11 +1759,11 @@ void IPv4(unsigned short extra, const struct pcap_pkthdr *header,const u_char *p
 				printf("\n\tSin registro");
 				break;
 			case 31:	
-				printf("Error de conversión de datagrama (obsoleto)");
+				printf("Error de conversi�n de datagrama (obsoleto)");
 				printf("\n\tSin registro");
 				break;
 			case 32:	
-				printf("Redirección de host móvil (obsoleto)");
+				printf("Redirecci�n de host m�vil (obsoleto)");
 				printf("\n\tSin registro");
 				break;
 			case 33:	
@@ -1776,15 +1771,15 @@ void IPv4(unsigned short extra, const struct pcap_pkthdr *header,const u_char *p
 				printf("\n\tSin registro");
 				break;
 			case 34:	
-				printf("IPv6 Estoy aquí (obsoleto)");
+				printf("IPv6 Estoy aqu� (obsoleto)");
 				printf("\n\tSin registro");
 				break;
 			case 35:	
-				printf("Solicitud de registro móvil (obsoleta)");
+				printf("Solicitud de registro m�vil (obsoleta)");
 				printf("\n\tSin registro");
 				break;
 			case 36:	
-				printf("Respuesta de registro móvil (obsoleto)");
+				printf("Respuesta de registro m�vil (obsoleto)");
 				printf("\n\tSin registro");
 				break;
 			case 37:	
@@ -1806,19 +1801,19 @@ void IPv4(unsigned short extra, const struct pcap_pkthdr *header,const u_char *p
 						printf("\n\tSPI incorrecto");
 						break;
 					case 1: 	
-						printf("\n\tAutenticación fallida");
+						printf("\n\tAutenticaci�n fallida");
 						break;
 					case 2: 	
-						printf("\n\tFalló la descompresión");
+						printf("\n\tFall� la descompresi�n");
 						break;
 					case 3: 	
-						printf("\n\tFalló el descifrado");
+						printf("\n\tFall� el descifrado");
 						break;
 					case 4: 	
-						printf("\n\tNecesita autenticación");
+						printf("\n\tNecesita autenticaci�n");
 						break;
 					case 5: 	
-						printf("\n\tNecesita autorización");
+						printf("\n\tNecesita autorizaci�n");
 						break;
 					default:
 						printf("\n\tSin asignar");
@@ -1852,7 +1847,7 @@ void IPv4(unsigned short extra, const struct pcap_pkthdr *header,const u_char *p
 						printf("\n\tNo hay tal entrada de tabla");
 						break;
 					case 4:
-						printf("\n\tMúltiples interfaces satisfacen la consulta");
+						printf("\n\tM�ltiples interfaces satisfacen la consulta");
 						break;
 					default:
 						printf("\n\tSin asignar");
@@ -1887,7 +1882,109 @@ void IPv4(unsigned short extra, const struct pcap_pkthdr *header,const u_char *p
 
 	void IGMP(unsigned short extra, const struct pcap_pkthdr *header,const u_char *pkt_data){
 		stats->igmp++;
-		printf("IGMP");
+		int i=extra;
+		int j;
+		switch(pkt_data[i++]){
+			case 17://0x11 Mebership query
+				printf("+Peticion de membrecia\n");
+				printf("+Tiempo maximo de respuesta: %02X",pkt_data[i++]);
+				printf("+Checksum:%d\n",(pkt_data[i++]<<8)+pkt_data[i++]);
+				printf("+Direccion del grupo-> %02X:%02X:%02X:%02X\n",pkt_data[i++],pkt_data[i++],pkt_data[i++],pkt_data[i++]);
+				printf("+Reservado (%d)\n",pkt_data[i]>>4);
+				printf("+S: %d\n",(pkt_data[i]>>3)&1);
+				printf("+QRV: %d\n",pkt_data[i++]&7);
+				printf("+QQIC: %d\n",pkt_data[i++]);
+				int fuentes=(pkt_data[i++]<<8)+pkt_data[i++];
+				printf("+Cantidad de fuentes: %d\n",fuentes);
+			for (j = 1; j <= fuentes; j++)
+				printf("+Direccion de fuente %d: %d.%d.%d.%d\n",j,pkt_data[i++],pkt_data[i++],pkt_data[i++],pkt_data[i++]);
+			 
+				break;
+			case 18://0x12 IGMPv1 Membership report
+				printf("+Reporte de membrecia IGMPv1\n");
+				printf("+El siguiente octeto esta sin usar (%02X)\n",pkt_data[i++]);
+				printf("+Checksum:%d\n",(pkt_data[i++]<<8)+pkt_data[i++]);
+				printf("+Direccion del grupo-> %02X:%02X:%02X:%02X\n",pkt_data[i++],pkt_data[i++],pkt_data[i++],pkt_data[i]);
+				break;
+			case 22://0x16 IGMPv2 Mebership report
+				printf("+Reporte de membrecia IGMPv2\n");
+				printf("+Tiempo maximo de respuesta: %02X\n",pkt_data[i++]);
+				printf("+Checksum:%d\n",(pkt_data[i++]<<8)+pkt_data[i++]);
+				printf("+Direccion del grupo-> %02X:%02X:%02X:%02X\n",pkt_data[i++],pkt_data[i++],pkt_data[i++],pkt_data[i]);
+				break;
+			case 23://0x17 Leave Group
+				printf("+Salir del grupo\n");
+				printf("+Tiempo maximo de respuesta: %02X\n",pkt_data[i++]);
+				printf("+Checksum:%d\n",(pkt_data[i++]<<8)+pkt_data[i++]);
+				printf("+Direccion del grupo-> %02X:%02X:%02X:%02X\n",pkt_data[i++],pkt_data[i++],pkt_data[i++],pkt_data[i]);
+				break;
+			case 34://0x22 IGMPv3 Membership report
+				printf("+Reporte de membrecia IGMPv3\n");
+				printf("+El siguiente octeto esta reservado (%02X)\n",pkt_data[i++]);
+				printf("+Checksum:%d\n",(pkt_data[i++]<<8)+pkt_data[i++]);
+				printf("+Reservado (%02X %02X)\n",pkt_data[i++],pkt_data[i++]);
+				int M=(pkt_data[i++]<<8)+pkt_data[i++];
+				printf("+Numero de registro de grupos:%d\n",M);
+				for (j=1;j<=M;j++){
+					printf("*Grupo [%d]\n",j);
+					i=IGMP_G(i,j,header,pkt_data);
+				}
+				
+				break;
+			default:
+				printf("+?");
+				break;
+		}
+
+	}
+
+		int IGMP_G(int extra,int indice, const struct pcap_pkthdr *header,const u_char *pkt_data){
+			int i=(int)extra;
+			printf("\n*%d.-Tipo de registro:",indice);
+			switch (pkt_data[i++]){
+				case 1:
+					printf("MODE_IS_INCLUDE");
+					break;
+				case 2:
+					printf("MODE_IS_EXCLUDE");
+					break;
+				case 3:
+					printf("CHANGE_TO_INCLUDE_MODE");
+					break;
+				case 4:
+					printf("CHANGE_TO_EXCLUDE_MODE");
+					break;
+				case 5:
+					printf("ALLOW_NEW_SOURCES");
+					break;
+				case 6:
+					printf("BLOCK_OLD_SOURCES");
+					break;
+				default:
+					printf("?");
+					break;
+			}
+			int aux_l=pkt_data[i++];
+			printf("\n*%d.-Auxiliar longitud de los datos: %d",indice,aux_l);
+			int fuentes=(pkt_data[i++]<<8)+pkt_data[i++];
+			printf("\n*%d.-Numero de fuentes:%d",indice,fuentes);
+			printf("\n*%d.-Direccion multicast: %d.%d.%d.%d",indice,pkt_data[i++],pkt_data[i++],pkt_data[i++],pkt_data[i++]);
+				int j;
+			for (j = 1; j <= fuentes; j++)
+				printf("\n*%d.%d.-Direccion de fuente: %d.%d.%d.%d",indice,j,pkt_data[i++],pkt_data[i++],pkt_data[i++],pkt_data[i++]);
+			
+			printf("\n*%d.-Datos adicionales:\n",indice);
+			for(j=0;j!=aux_l;j)
+				printf("\n%d %d %d %d",pkt_data[i++],pkt_data[i++],pkt_data[i++],pkt_data[i++]);
+			return i;
+		}
+	
+	void UDP(unsigned short extra, const struct pcap_pkthdr *header,const u_char *pkt_data){
+		stats->udp++;
+	}
+
+	void TCP(unsigned short extra, const struct pcap_pkthdr *header,const u_char *pkt_data){
+		stats->tcp++;
 	}
 
 void IPv6(unsigned short extra, const struct pcap_pkthdr *header,const u_char *pkt_data){
@@ -2010,7 +2107,7 @@ void LLC(unsigned short extra, const struct pcap_pkthdr *header,const u_char *pk
 	
 	}
 
-	else{//tomar 1 byte de vínculo lógico de control
+	else{//tomar 1 byte de v�nculo l�gico de control
 		a=pkt_data[i]&1;
 		switch(a){
 			case 0://I
@@ -2129,37 +2226,27 @@ void intbin(int n,int max){
 			printf("0");
 	printf(" (%d)",m);
 }
-
-void registrar(int protocolo, int capa){
-	if(estad_is_0) return;
-	if (capa==0){
-		switch (protocolo){
-		case 1:
-			stats->icmp++;
-			break;
-		case 2:
-			stats->igmp++;
-			break;
-		
-		default:
-			break;
-		}
-	}
-	else{
-		switch (protocolo){
-			case 2048://08 00 IPv4
-				stats->ipv4++;
-				break;
-
-			case 34525://86 DD IPv6
-				stats->ipv6++;
-				break;
-			case 2054://08 06 ARP
-				stats->arp++;
-				break;
-		}
-	}
+ 
+void Statsto0(){
+	stats->ipv4=0;
+		stats->icmp=0;
+		stats->igmp=0;
+		stats->tcp=0;
+	stats->ipv6=0;
+	stats->arp=0;
+	stats->llc=0;
+	return;
 }
 
-
-
+void PrintStats(){
+	printf("Estadisticas:\n");
+			printf("\tipv4:%d\n",stats->ipv4);
+				printf("\t\ticmp:%d\n",stats->icmp);
+				printf("\t\tigmp:%d\n",stats->igmp);
+				printf("\t\tudp:%d\n",stats->udp);
+				printf("\t\ttcp:%d\n",stats->tcp);
+			printf("\tipv6:%d\n",stats->ipv6);
+			printf("\tarp:%d\n",stats->arp);
+			printf("\tllc:%d\n",stats->llc);
+	return;
+}

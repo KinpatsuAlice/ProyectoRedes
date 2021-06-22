@@ -66,6 +66,9 @@ int Archivo(){
 	char errbuf[PCAP_ERRBUF_SIZE];
 	char source[PCAP_BUF_SIZE];
 	char RUTA[100];
+	struct bpf_program codigo_filtro;
+	pcap_dumper_t *dumpfile = NULL;
+	char  dumpfilepath[100];
 	printf("Escribe la direccion absoluta del archivo deseado: (Max 100 caracteres)\n");
 	scanf("%s",&RUTA);
 
@@ -104,16 +107,6 @@ int Archivo(){
     }
 
     // read and dispatch packets until EOF is reached
-	/* start the capture */
-	int intaux;
-	printf("1.Anadir filtro\n0.Sin filtro\n");
-	scanf("%d",&intaux);
-	estad_is_0=intaux;
-	if(intaux==1){
-		;
-		//codigo de 
-	//pcap_compile()
-	}
 	system("cls");
 	Statsto0();
 	pcap_loop(fp, 0, packet_handler, NULL);
@@ -132,6 +125,10 @@ int Sniffer(){
 	int i=0;
 	pcap_t *adhandle;
 	char errbuf[PCAP_ERRBUF_SIZE];
+	struct bpf_program codigo_filtro;
+	pcap_dumper_t *dumpfile = NULL;
+	char  dumpfilepath[100];
+	char  filtro[100];
 	
 	/* Retrieve the device list */
 	if(pcap_findalldevs(&alldevs, errbuf) == -1){
@@ -182,52 +179,49 @@ int Sniffer(){
 	}
 	
 	printf("\nEscuchando en %s...\n", d->description);
-
-/*
-	bpf_u_int32 netmask;
-
-	if (d->addresses != NULL)
-        //Retrieve the mask of the first address of the interface 
-        netmask=((struct sockaddr_in *)(d->addresses->netmask))->sin_addr.S_un.S_addr;
-    else
-        //If the interface is without an address we suppose to be in a C class network 
-        netmask=0xffffff; 
-
-	if (pcap_compile(adhandle, &fcode, "ip", 1, netmask) < 0){
-        fprintf(stderr,"\nUnable to compile the packet filter. Check the syntax.\n");
-        //Free the device list 
-        pcap_freealldevs(alldevs);
-        return -1;
-    }
-	    
-	if (pcap_setfilter(adhandle, &fcode) < 0){
-        fprintf(stderr,"\nError setting the filter.\n");
-        //Free the device list 
-        pcap_freealldevs(alldevs);
-        return -1;
-    }
-*/
-
-
-
-	/* At this point, we don't need any more the device list. Free it */
-	pcap_freealldevs(alldevs);
 	
 	/* start the capture */
 	int intaux;
-	printf("1.Anadir filtro\n0.Sin filtro\n");
+	printf("Filtro? (1/0)\n");
 	scanf("%d",&intaux);
 	estad_is_0=intaux;
 	if(intaux==1){
-		;
-		//codigo de 
-	//pcap_compile()
+		printf("\nEscriba los parametros del filtro:");
+		scanf("%s", filtro);
+		/* Compile the filter */
+		if(pcap_compile(adhandle, &codigo_filtro, filtro, 1, PCAP_NETMASK_UNKNOWN) < 0){
+			i = 1;
+			fprintf(stderr, "\nError compilando el filtro\n");
+			return -1;
+		}
+		/* Set the filter */
+		if(pcap_setfilter(adhandle, &codigo_filtro) < 0){
+			i = 1;
+			fprintf(stderr, "\nError configurando el filtro\n");
+			return -1;
+		} 
+	}
+	printf("\nDesea guardar la captura? (0/1):\n");
+	scanf("%d",&intaux);
+	system("cls");
+	if(intaux){
+		/* Get the file path */
+		printf("\nIngresa la direccion absoluta deseada de la captura terminando en .pcap: ");
+		fflush(stdin);
+		scanf("%s", dumpfilepath);
+		/* Open the dump file */
+		if(!(dumpfile = pcap_dump_open(adhandle, dumpfilepath))){
+			fprintf(stderr,"\nError abriendo el archivo de salida\n");
+			return -1;
+		}
 	}
 	printf("\nEscribir cuantos paquetes se desean analizar:\n");
 	scanf("%d",&intaux);
 	system("cls");
-	Statsto0();
-	pcap_loop(adhandle,intaux, packet_handler, NULL);
+	Statsto0();   
+	/* At this point, we don't need any more the device list. Free it */
+	pcap_freealldevs(alldevs);
+	pcap_loop(adhandle,intaux, packet_handler, (unsigned char *)dumpfile);
 	pcap_close(adhandle);
 	PrintStats();
 	puts("Presiona una tecla para continuar");
@@ -236,14 +230,14 @@ int Sniffer(){
 }
 
 /* Callback function invoked by libpcap for every incoming packet */
-void packet_handler(u_char *param, const struct pcap_pkthdr *header, const u_char *pkt_data){
+void packet_handler(u_char *dumpfile, const struct pcap_pkthdr *header, const u_char *pkt_data){
 
 	unsigned short tipo = (pkt_data[12]*256)+pkt_data[13];
 	
 	struct tm *ltime;
 	char timestr[16];
 	time_t local_tv_sec;
-
+	if(dumpfile) pcap_dump(dumpfile, header, pkt_data);
 	printf("Trama completa:\n");
 	int a;
 	for(a=0;a!=header->len;a++){
@@ -259,7 +253,6 @@ void packet_handler(u_char *param, const struct pcap_pkthdr *header, const u_cha
 
 	printf("\n\n");
 	//Parametros no usados
-	(VOID)(param);
 	(VOID)(pkt_data);
 
 	local_tv_sec = header->ts.tv_sec;
@@ -321,7 +314,6 @@ void packet_handler(u_char *param, const struct pcap_pkthdr *header, const u_cha
 	printf("\n_______________________________________________________________________\n\n");
 	
 }
-
 
 
 //Catalogo de protocolos interpretables__________________________________________________________________________________________________________________________________
@@ -1981,10 +1973,46 @@ void IPv4(unsigned short extra, const struct pcap_pkthdr *header,const u_char *p
 	
 	void UDP(unsigned short extra, const struct pcap_pkthdr *header,const u_char *pkt_data){
 		stats->udp++;
+		int i=extra;
+		printf("\n+Puerto origen: %d",(pkt_data[i++]<<8)+pkt_data[i++]);
+		printf("\n+Puerto destino: %d",(pkt_data[i++]<<8)+pkt_data[i++]);
+		int l=(pkt_data[i++]<<8)+pkt_data[i++];
+		printf("\n+Longitud del mensaje: %d",l);
+		printf("\n+Checksum: %d",(pkt_data[i++]<<8)+pkt_data[i++]);
+		printf("\n+Datos:\n");
+		int j;
+		for(j=8;j!=l;j++){
+			printf("%02X ",pkt_data[i++]);
+			if(j%4==3)
+				printf("\n");
+		}
+
 	}
 
 	void TCP(unsigned short extra, const struct pcap_pkthdr *header,const u_char *pkt_data){
 		stats->tcp++;
+		int i=extra;
+		printf("\n+Puerto origen: %02x.%02X",pkt_data[i++],pkt_data[i++]);
+		printf("\n+Puerto destino: %02x.%02X",pkt_data[i++],pkt_data[i++]);
+		printf("\n+Numero de secuencia: %02x.%02X.%02x.%02X",pkt_data[i++],pkt_data[i++],pkt_data[i++],pkt_data[i++]);
+		printf("\n+Numero de reconocimiento: %02x.%02X.%02x.%02X",pkt_data[i++],pkt_data[i++],pkt_data[i++],pkt_data[i++]);
+		printf("\n+Numero de reconocimiento: %02x.%02X.%02x.%02X",pkt_data[i++],pkt_data[i++],pkt_data[i++],pkt_data[i++]);
+		int data_offset=pkt_data[i]>>4;
+		printf("\n+Compensación de reconocimiento: %d",data_offset);
+		printf("\n+Reservado (%d)",((pkt_data[i++]&15)<<2)+pkt_data[i]>>6);
+		printf("\n+URG: %d",(pkt_data[i]>>5)&1);
+		printf("\n+ACK: %d",(pkt_data[i]>>4)&1);
+		printf("\n+PSH: %d",(pkt_data[i]>>3)&1);
+		printf("\n+RST: %d",(pkt_data[i]>>2)&1);
+		printf("\n+SYN: %d",(pkt_data[i]>>1)&1);
+		printf("\n+FIN: %d",pkt_data[i++]&1);
+		printf("\n+Ventana: %d",pkt_data[i++]+pkt_data[i++]);
+		printf("\n+Checksum: %02x %02X",pkt_data[i++],pkt_data[i++]);
+		printf("\n+Puntero Urgente: %02x %02X",pkt_data[i++],pkt_data[i++]);
+		printf("\n+Opciones (+relleno):\n");
+		int j;
+		for(j=5;j!=data_offset;j++)
+			printf("%02x %02X %02X %02X\n",pkt_data[i++],pkt_data[i++],pkt_data[i++],pkt_data[i++]);
 	}
 
 void IPv6(unsigned short extra, const struct pcap_pkthdr *header,const u_char *pkt_data){
